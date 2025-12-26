@@ -1,0 +1,55 @@
+{
+  "ticker": "AMD",
+  "fetchedAt": "2025-12-24T11:22:56.477Z",
+  "years": [
+    {
+      "year": "2020",
+      "revenue": 6731000000,
+      "operatingIncome": 631000000,
+      "netIncome": 341000000,
+      "totalEquity": 2827000000,
+      "freeCashFlow": 276000000
+    },
+    {
+      "year": "2021",
+      "revenue": 9763000000,
+      "operatingIncome": 1369000000,
+      "netIncome": 2490000000,
+      "totalEquity": 5837000000,
+      "freeCashFlow": 777000000
+    },
+    {
+      "year": "2022",
+      "revenue": 16434000000,
+      "operatingIncome": 3648000000,
+      "netIncome": 3162000000,
+      "totalEquity": 7497000000,
+      "freeCashFlow": 3220000000
+    },
+    {
+      "year": "2023",
+      "revenue": 23601000000,
+      "operatingIncome": 1264000000,
+      "netIncome": 1320000000,
+      "totalEquity": 54750000000,
+      "freeCashFlow": 3115000000
+    },
+    {
+      "year": "2024",
+      "revenue": 22680000000,
+      "operatingIncome": 401000000,
+      "netIncome": 854000000,
+      "totalEquity": 55892000000,
+      "freeCashFlow": 1121000000
+    },
+    {
+      "year": "2025",
+      "revenue": 25785000000,
+      "operatingIncome": 2086000000,
+      "netIncome": 1641000000,
+      "totalEquity": 57568000000,
+      "freeCashFlow": 2405000000
+    }
+  ],
+  "warnings": []
+}

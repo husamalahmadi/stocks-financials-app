@@ -1,0 +1,55 @@
+{
+  "ticker": "BKNG",
+  "fetchedAt": "2025-12-25T21:59:32.440Z",
+  "years": [
+    {
+      "year": "2020",
+      "revenue": 15066000000,
+      "operatingIncome": 5345000000,
+      "netIncome": 4865000000,
+      "totalEquity": 5933000000,
+      "freeCashFlow": 4497000000
+    },
+    {
+      "year": "2021",
+      "revenue": 6796000000,
+      "operatingIncome": 580000000,
+      "netIncome": 59000000,
+      "totalEquity": 4893000000,
+      "freeCashFlow": -201000000
+    },
+    {
+      "year": "2022",
+      "revenue": 10958000000,
+      "operatingIncome": 2496000000,
+      "netIncome": 1165000000,
+      "totalEquity": 6178000000,
+      "freeCashFlow": 2516000000
+    },
+    {
+      "year": "2023",
+      "revenue": 17090000000,
+      "operatingIncome": 5102000000,
+      "netIncome": 3058000000,
+      "totalEquity": 2782000000,
+      "freeCashFlow": 6186000000
+    },
+    {
+      "year": "2024",
+      "revenue": 21365000000,
+      "operatingIncome": 5835000000,
+      "netIncome": 4289000000,
+      "totalEquity": -2744000000,
+      "freeCashFlow": 6999000000
+    },
+    {
+      "year": "2025",
+      "revenue": 23739000000,
+      "operatingIncome": 7555000000,
+      "netIncome": 5882000000,
+      "totalEquity": -4020000000,
+      "freeCashFlow": 7894000000
+    }
+  ],
+  "warnings": []
+}

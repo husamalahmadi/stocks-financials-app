@@ -1,0 +1,12 @@
+{
+  "name": "stocks-financials-app",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "npm -w server run dev & npm -w client run dev",
+    "install-all": "npm -w server i && npm -w client i"
+  }
+}

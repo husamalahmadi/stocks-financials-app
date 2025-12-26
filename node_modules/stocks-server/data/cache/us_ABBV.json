@@ -1,0 +1,55 @@
+{
+  "ticker": "ABBV",
+  "fetchedAt": "2025-12-25T10:00:23.160Z",
+  "years": [
+    {
+      "year": "2020",
+      "revenue": 33266000000,
+      "operatingIncome": 12983000000,
+      "netIncome": 7882000000,
+      "totalEquity": -8172000000,
+      "freeCashFlow": 12772000000
+    },
+    {
+      "year": "2021",
+      "revenue": 45804000000,
+      "operatingIncome": 11363000000,
+      "netIncome": 4622000000,
+      "totalEquity": 13097000000,
+      "freeCashFlow": 16790000000
+    },
+    {
+      "year": "2022",
+      "revenue": 56197000000,
+      "operatingIncome": 17924000000,
+      "netIncome": 11549000000,
+      "totalEquity": 15436000000,
+      "freeCashFlow": 21990000000
+    },
+    {
+      "year": "2023",
+      "revenue": 58054000000,
+      "operatingIncome": 18117000000,
+      "netIncome": 11845000000,
+      "totalEquity": 17287000000,
+      "freeCashFlow": 24248000000
+    },
+    {
+      "year": "2024",
+      "revenue": 54318000000,
+      "operatingIncome": 12757000000,
+      "netIncome": 4873000000,
+      "totalEquity": 10397000000,
+      "freeCashFlow": 22062000000
+    },
+    {
+      "year": "2025",
+      "revenue": 56334000000,
+      "operatingIncome": 11894000000,
+      "netIncome": 4286000000,
+      "totalEquity": 3364000000,
+      "freeCashFlow": 17832000000
+    }
+  ],
+  "warnings": []
+}

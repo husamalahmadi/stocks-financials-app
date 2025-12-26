@@ -1,0 +1,55 @@
+{
+  "ticker": "AON",
+  "fetchedAt": "2025-12-24T11:22:28.730Z",
+  "years": [
+    {
+      "year": "2020",
+      "revenue": 11013000000,
+      "operatingIncome": 2178000000,
+      "netIncome": 1573000000,
+      "totalEquity": 3449000000,
+      "freeCashFlow": 1610000000
+    },
+    {
+      "year": "2021",
+      "revenue": 11066000000,
+      "operatingIncome": 2794000000,
+      "netIncome": 2018000000,
+      "totalEquity": 3583000000,
+      "freeCashFlow": 2642000000
+    },
+    {
+      "year": "2022",
+      "revenue": 12193000000,
+      "operatingIncome": 2111000000,
+      "netIncome": 1308000000,
+      "totalEquity": 1158000000,
+      "freeCashFlow": 2045000000
+    },
+    {
+      "year": "2023",
+      "revenue": 12479000000,
+      "operatingIncome": 3490000000,
+      "netIncome": 2646000000,
+      "totalEquity": -429000000,
+      "freeCashFlow": 3023000000
+    },
+    {
+      "year": "2024",
+      "revenue": 13376000000,
+      "operatingIncome": 3822000000,
+      "netIncome": 2628000000,
+      "totalEquity": -742000000,
+      "freeCashFlow": 3183000000
+    },
+    {
+      "year": "2025",
+      "revenue": 15698000000,
+      "operatingIncome": 4176000000,
+      "netIncome": 2720000000,
+      "totalEquity": 6430000000,
+      "freeCashFlow": 2817000000
+    }
+  ],
+  "warnings": []
+}
