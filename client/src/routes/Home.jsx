@@ -1,6 +1,6 @@
 // FILE: client/src/routes/Home.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n.jsx";
 
 /* -------- API base (self-contained) -------- */
@@ -203,7 +203,28 @@ export default function Home() {
         }}
       >
         <div style={{ fontSize: 18, fontWeight: 800, flex: "0 0 auto" }}>{t("DASHBOARD")}</div>
+
+        {/* Same DOM order: Contact then Language.
+            LTR => Contact left of Language. RTL => Contact right of Language. */}
         <div style={{ marginInlineStart: "auto", display: "flex", gap: 10 }}>
+          <Link
+            to="/contact"
+            aria-label={t("CONTACT_US")}
+            style={{
+              border: "1px solid #d1d5db",
+              borderRadius: 999,
+              padding: "6px 10px",
+              fontWeight: 800,
+              background: "#fff",
+              color: "#111827",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+            }}
+          >
+            {t("CONTACT_US")}
+          </Link>
+
           <LangToggle lang={lang} onToggle={toggleLang} t={t} />
         </div>
       </div>
@@ -267,9 +288,7 @@ export default function Home() {
       <Card title={t("COMPANIES")}>
         {loading && <div>{t("LOADING")}</div>}
         {error && <div style={{ color: "#b91c1c", whiteSpace: "pre-wrap" }}>{error}</div>}
-        {!loading && !error && filtered.length === 0 && (
-          <div style={{ color: "#6b7280" }}>{t("NO_MATCH")}</div>
-        )}
+        {!loading && !error && filtered.length === 0 && <div style={{ color: "#6b7280" }}>{t("NO_MATCH")}</div>}
 
         {!loading && !error && filtered.length > 0 && (
           <div
@@ -281,11 +300,7 @@ export default function Home() {
             }}
           >
             {filtered.map((it) => (
-              <StockTile
-                key={`${it.ticker}_${it.name}`}
-                item={it}
-                onClick={() => navigate(`/stock/${encodeURIComponent(it.ticker)}`)}
-              />
+              <StockTile key={`${it.ticker}_${it.name}`} item={it} onClick={() => navigate(`/stock/${encodeURIComponent(it.ticker)}`)} />
             ))}
           </div>
         )}

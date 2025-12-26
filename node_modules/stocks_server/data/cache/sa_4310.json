@@ -1,0 +1,55 @@
+{
+  "ticker": "4310",
+  "fetchedAt": "2025-12-26T23:38:29.226Z",
+  "years": [
+    {
+      "year": "2020",
+      "revenue": 151760334,
+      "operatingIncome": 5122292,
+      "netIncome": 18144589,
+      "totalEquity": 3216725685,
+      "freeCashFlow": -58523958
+    },
+    {
+      "year": "2021",
+      "revenue": 112936069,
+      "operatingIncome": -16256274,
+      "netIncome": -25837585,
+      "totalEquity": 3191678543,
+      "freeCashFlow": -63932654
+    },
+    {
+      "year": "2022",
+      "revenue": 42454283,
+      "operatingIncome": -45889497,
+      "netIncome": -22528742,
+      "totalEquity": 3169015591,
+      "freeCashFlow": 27406047
+    },
+    {
+      "year": "2023",
+      "revenue": 56686593,
+      "operatingIncome": -38810919,
+      "netIncome": -18836026,
+      "totalEquity": 3152917082,
+      "freeCashFlow": -27916133
+    },
+    {
+      "year": "2024",
+      "revenue": 66860666,
+      "operatingIncome": -48743535,
+      "netIncome": -45603559,
+      "totalEquity": 3096869737,
+      "freeCashFlow": 51199041
+    },
+    {
+      "year": "2025",
+      "revenue": 158804993,
+      "operatingIncome": -25682815,
+      "netIncome": -21308219,
+      "totalEquity": 3082789904,
+      "freeCashFlow": -222145193
+    }
+  ],
+  "warnings": []
+}
