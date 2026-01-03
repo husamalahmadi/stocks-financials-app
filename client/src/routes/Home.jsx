@@ -177,7 +177,7 @@ export default function Home() {
           }}
         >
           <div>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>{t("DASHBOARD")}</div>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>Trueprice.cash</div>
             <div style={{ fontSize: 13, color: "#cbd5e1", marginTop: 2 }}>
               {market === "us" ? t("MARKET_US") : t("MARKET_SA")}
             </div>
@@ -352,6 +352,17 @@ export default function Home() {
           )}
         </div>
       </div>
+      <footer
+        style={{
+        marginTop: 24,
+         padding: "14px 4px",
+          textAlign: "center",
+          color: "#64748b",
+       fontSize: 12,
+        }}
+       >
+      © Trueprice.cash
+      </footer>
     </div>
   );
 }

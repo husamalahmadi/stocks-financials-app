@@ -233,6 +233,18 @@ export default function Contact() {
           </div>
         )}
       </form>
+      <footer
+          style={{
+            marginTop: 24,
+            padding: "14px 4px",
+            textAlign: "center",
+            color: "#64748b",
+            fontSize: 12,
+          }}
+          >
+            © Trueprice.cash
+        </footer>
+
     </div>
   );
 }

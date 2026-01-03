@@ -1,3 +1,4 @@
+// FILE: client/src/i18n.jsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const I18nContext = createContext(null);
@@ -67,6 +68,12 @@ const dict = {
     FLAT: "flat",
     NO_DATA: "no data",
     FAIR_ABBR: "fair",
+
+    // Trend labels
+    TREND: "Trend",
+    UPTREND: "Uptrend",
+    DOWNTREND: "Downtrend",
+    NEUTRAL: "Neutral",
   },
 
   ar: {
@@ -133,6 +140,12 @@ const dict = {
     FLAT: "ثبات",
     NO_DATA: "لا توجد بيانات",
     FAIR_ABBR: "عادل",
+
+    // Trend labels
+    TREND: "الاتجاه",
+    UPTREND: "اتجاه صاعد",
+    DOWNTREND: "اتجاه هابط",
+    NEUTRAL: "محايد",
   },
 };
 

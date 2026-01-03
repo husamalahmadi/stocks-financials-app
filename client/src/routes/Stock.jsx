@@ -32,6 +32,42 @@ function fmtBill(n) {
   return fmt2(x);
 }
 
+/* Trend helpers */
+function sortSeries(series) {
+  return (series || [])
+    .filter((p) => Number.isFinite(Number(p?.value)))
+    .map((p) => ({ label: String(p.label), value: Number(p.value) }))
+    .sort((a, b) => Number(a.label) - Number(b.label));
+}
+
+function calcTrend(series, { neutralThresholdPct = 2 } = {}) {
+  const data = sortSeries(series);
+  if (data.length < 2) return { kind: "no_data", pct: null };
+
+  const first = data[0]?.value;
+  const last = data[data.length - 1]?.value;
+
+  if (!Number.isFinite(first) || !Number.isFinite(last)) return { kind: "no_data", pct: null };
+
+  const denom = Math.max(Math.abs(first), Math.abs(last), 1);
+  const pct = ((last - first) / denom) * 100;
+
+  if (!Number.isFinite(pct)) return { kind: "no_data", pct: null };
+  if (Math.abs(pct) < neutralThresholdPct) return { kind: "neutral", pct };
+
+  return { kind: pct > 0 ? "up" : "down", pct };
+}
+
+function trendText(series, t) {
+  const { kind, pct } = calcTrend(series);
+  if (kind === "no_data") return t("NO_DATA");
+
+  const word =
+    kind === "up" ? t("UPTREND") : kind === "down" ? t("DOWNTREND") : t("NEUTRAL");
+
+  return `${word} · ${fmt2(Math.abs(pct))}%`;
+}
+
 /* Small layout atoms */
 function Card({ title, children, style }) {
   return (
@@ -127,9 +163,7 @@ function CompareBar({ current, fair, currency, dir = "ltr", t }) {
 }
 
 function LineChart({ title, series, w = 380, dir = "ltr" }) {
-  const data = (series || [])
-    .filter((p) => Number.isFinite(p.value))
-    .sort((a, b) => Number(a.label) - Number(b.label));
+  const data = sortSeries(series);
 
   const h = 220;
   const pad = { t: 22, r: 18, b: 28, l: 56 };
@@ -166,6 +200,18 @@ function LineChart({ title, series, w = 380, dir = "ltr" }) {
         </g>
       ))}
     </svg>
+  );
+}
+
+function ChartBlock({ title, series, w, dir, t }) {
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <LineChart title={title} series={series} w={w} dir={dir} />
+      <div style={{ fontSize: 12, color: "#374151" }}>
+        <span style={{ fontWeight: 900 }}>{t("TREND")}:</span>{" "}
+        <span style={{ fontWeight: 800 }}>{trendText(series, t)}</span>
+      </div>
+    </div>
   );
 }
 
@@ -298,16 +344,6 @@ export default function Stock() {
   const serEquity = useMemo(() => toSeries("totalEquity"), [years]);
   const serFCF = useMemo(() => toSeries("freeCashFlow"), [years]);
 
-  const pctText = (series) => {
-    if (!series.length) return t("NO_DATA");
-    const a = series[0].value;
-    const b = series[series.length - 1].value;
-    if (!Number.isFinite(a) || !Number.isFinite(b)) return t("NO_DATA");
-    const chg = ((b - a) / Math.max(Math.abs(a), 1)) * 100;
-    const dirWord = chg > 0 ? t("UP") : chg < 0 ? t("DOWN") : t("FLAT");
-    return `${dirWord} ~ ${fmt2(Math.abs(chg))}%`;
-  };
-
   const fair = val?.data;
   const fairAvg = useMemo(() => {
     const arr = [fair?.fairEV, fair?.fairPS, fair?.fairPE].filter((n) => Number.isFinite(n));
@@ -318,7 +354,7 @@ export default function Stock() {
   return (
     <div style={{ background: "#f8fafc", minHeight: "100vh" }} dir={dir} lang={lang}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
-        {/* Banner (keep dark background like your 2nd screenshot) */}
+        {/* Banner */}
         <div
           style={{
             background: "#111827",
@@ -334,7 +370,7 @@ export default function Stock() {
           }}
         >
           <div style={{ display: "grid", gap: 2 }}>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>{t("REPORT")}</div>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>Trueprice.cash Financial Report</div>
             <div style={{ fontSize: 13, color: "#cbd5e1" }}>
               <b>{t("TICKER")}:</b> {ticker} — {company || "—"} · <b>{t("REPORT_DATE")}:</b> {reportDate}
             </div>
@@ -360,16 +396,16 @@ export default function Stock() {
           <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
             <ul style={{ margin: 0, paddingInlineStart: 18 }}>
               <li>
-                <b>{t("REV_GROWTH")}:</b> {pctText(serRevenue)}
+                <b>{t("REV_GROWTH")}:</b> {trendText(serRevenue, t)}
               </li>
               <li>
-                <b>{t("OP_INCOME")}:</b> {pctText(serOp)}
+                <b>{t("OP_INCOME")}:</b> {trendText(serOp, t)}
               </li>
               <li>
-                <b>{t("NET_INCOME")}:</b> {pctText(serNet)}
+                <b>{t("NET_INCOME")}:</b> {trendText(serNet, t)}
               </li>
               <li>
-                <b>{t("FCF")}:</b> {pctText(serFCF)}
+                <b>{t("FCF")}:</b> {trendText(serFCF, t)}
               </li>
               <li>
                 <b>{t("STOCK_VALUATION")}:</b> {t("FAIR_ABBR")}_ABBR ≈ {fmt2(fairAvg)} {currency}
@@ -423,17 +459,17 @@ export default function Stock() {
         {/* 3. Revenue & Income */}
         <Card title={t("REV_INC_TITLE")}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-            <LineChart title={t("REVENUE")} series={serRevenue} dir={dir} />
-            <LineChart title={t("OP_INCOME")} series={serOp} dir={dir} />
-            <LineChart title={t("NET_INCOME")} series={serNet} dir={dir} />
+            <ChartBlock title={t("REVENUE")} series={serRevenue} dir={dir} t={t} />
+            <ChartBlock title={t("OP_INCOME")} series={serOp} dir={dir} t={t} />
+            <ChartBlock title={t("NET_INCOME")} series={serNet} dir={dir} t={t} />
           </div>
         </Card>
 
         {/* 4. Equity & FCF */}
         <Card title={t("EQUITY_FCF_TITLE")}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 12 }}>
-            <LineChart title={t("TOTAL_EQUITY")} series={serEquity} w={480} dir={dir} />
-            <LineChart title={t("FCF")} series={serFCF} w={480} dir={dir} />
+            <ChartBlock title={t("TOTAL_EQUITY")} series={serEquity} w={480} dir={dir} t={t} />
+            <ChartBlock title={t("FCF")} series={serFCF} w={480} dir={dir} t={t} />
           </div>
         </Card>
 
@@ -475,6 +511,17 @@ export default function Stock() {
           )}
         </Card>
       </div>
+          <footer
+            style={{
+              marginTop: 24,
+              padding: "14px 4px",
+              textAlign: "center",
+              color: "#64748b",
+              fontSize: 12,
+            }}
+              >
+                © Trueprice.cash
+        </footer>
     </div>
   );
 }
