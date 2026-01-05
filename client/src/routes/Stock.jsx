@@ -7,11 +7,7 @@ import { useI18n } from "../i18n.jsx";
 function getApiBase() {
   const env = (import.meta.env.VITE_API_BASE || "").trim();
   if (env) return env.replace(/\/+$/, "");
-  if (import.meta.env.DEV && typeof window !== "undefined") {
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}:5175`; // change if your backend port differs
-  }
-  return typeof window !== "undefined" ? window.location.origin : "";
+  return ""; // use same-origin "/api" (Vite proxy handles dev; rewrites can handle prod)
 }
 const API_BASE = getApiBase();
 
