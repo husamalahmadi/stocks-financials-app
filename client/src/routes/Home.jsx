@@ -1,4 +1,3 @@
-// FILE: client/src/routes/Home.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n.jsx";
@@ -7,8 +6,9 @@ import { useI18n } from "../i18n.jsx";
 function getApiBase() {
   const env = (import.meta.env.VITE_API_BASE || "").trim();
   if (env) return env.replace(/\/+$/, "");
-  return ""; // use same-origin "/api" (Vite proxy handles dev; rewrites can handle prod)
+  return "";
 }
+
 const API_BASE = getApiBase();
 
 function normalize(s) {
@@ -30,49 +30,13 @@ function LangToggle({ lang, onToggle, t }) {
         background: "#ffffff",
         color: "#111827",
         cursor: "pointer",
-      }}
-    >
-      {active ? t("AR") : t("EN")}
-    </button>
-  );
-}
-
-function MarketToggle({ value, onChange, t }) {
-  const opt = [
-    { v: "us", label: t("MARKET_US") },
-    { v: "sa", label: t("MARKET_SA") },
-  ];
-  return (
-    <div
-      role="group"
-      aria-label="Market toggle"
-      style={{
         display: "inline-flex",
-        border: "1px solid #d1d5db",
-        borderRadius: 12,
-        overflow: "hidden",
-        background: "#fff",
+        alignItems: "center",
+        gap: 8,
       }}
     >
-      {opt.map((o) => (
-        <button
-          key={o.v}
-          onClick={() => onChange(o.v)}
-          aria-pressed={value === o.v}
-          style={{
-            padding: "10px 12px",
-            border: "none",
-            cursor: "pointer",
-            background: value === o.v ? "#111827" : "#fff",
-            color: value === o.v ? "#fff" : "#111827",
-            fontWeight: 800,
-            fontSize: 12,
-          }}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
+      {lang === "en" ? t("EN") : t("AR")}
+    </button>
   );
 }
 
@@ -89,41 +53,41 @@ export default function Home() {
     error: "",
     items: [],
     industries: [],
-    source: "",
   });
 
   useEffect(() => {
     let alive = true;
 
-    async function load() {
+    async function run() {
       try {
         setState((s) => ({ ...s, loading: true, error: "" }));
-        const r = await fetch(`${API_BASE}/api/stocks?market=${encodeURIComponent(market)}`);
-        if (!r.ok) throw new Error(`${t("ERR_LOAD_STOCKS")} (HTTP ${r.status})`);
-        const j = await r.json();
+
+        const url = `${API_BASE}/api/stocks?market=${encodeURIComponent(market)}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+
+        const json = await res.json();
         if (!alive) return;
 
         setState({
           loading: false,
           error: "",
-          items: Array.isArray(j?.items) ? j.items : [],
-          industries: Array.isArray(j?.industries) ? j.industries : [],
-          source: j?.source || "",
+          items: json?.items || [],
+          industries: json?.industries || [],
         });
-
-        setIndustry("all");
-        setQ("");
       } catch (e) {
         if (!alive) return;
         setState((s) => ({
           ...s,
           loading: false,
-          error: e?.message || t("ERR_LOAD_STOCKS"),
+          error: t("ERR_LOAD_STOCKS"),
+          items: [],
+          industries: [],
         }));
       }
     }
 
-    load();
+    run();
     return () => {
       alive = false;
     };
@@ -144,31 +108,43 @@ export default function Home() {
       const name = normalize(it?.name);
       const ticker = normalize(it?.ticker);
       const ind = (it?.industry || "").toString();
+      const indNorm = normalize(ind);
 
       const matchesQuery =
-        !query || name.includes(query) || ticker.includes(query) || ind.toLowerCase().includes(query);
+        !query ||
+        name.includes(query) ||
+        ticker.includes(query) ||
+        indNorm.includes(query);
 
       const matchesIndustry = !wantIndustry || ind === wantIndustry;
 
       return matchesQuery && matchesIndustry;
     });
-  }, [state.items, q, industry]);
+  }, [state.items, industry, q]);
+
+  function resetFilters() {
+    setIndustry("all");
+    setQ("");
+  }
+
+  function goToStock(ticker) {
+    navigate(`/stock/${encodeURIComponent(ticker)}`);
+  }
 
   return (
     <div dir={dir} lang={lang} style={{ minHeight: "100vh", background: "#f8fafc" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
-        {/* Header (dark like Stock page) */}
+        {/* Header (dark like Stock) */}
         <div
           style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: 14,
-            borderRadius: 16,
-            background: "#111827",
+            borderRadius: 18,
+            background: "linear-gradient(180deg, #0f172a, #111827)",
+            padding: "14px 16px",
             color: "#fff",
-            boxShadow: "0 1px 10px rgba(0,0,0,0.08)",
+            boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
           }}
         >
           <div>
@@ -178,7 +154,25 @@ export default function Home() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginInlineStart: "auto" }}>
+            <Link
+              to="/about"
+              aria-label={t("ABOUT_US")}
+              style={{
+                border: "1px solid #d1d5db",
+                borderRadius: 999,
+                padding: "6px 10px",
+                fontWeight: 700,
+                background: "#fff",
+                color: "#111827",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              {t("ABOUT_US")}
+            </Link>
+
             <Link
               to="/contact"
               aria-label={t("CONTACT_US")}
@@ -212,80 +206,120 @@ export default function Home() {
             boxShadow: "0 1px 10px rgba(0,0,0,0.04)",
           }}
         >
-          <div style={{ fontWeight: 900, marginBottom: 10, color: "#111827" }}>{t("FILTERS")}</div>
+          <div style={{ fontWeight: 900, marginBottom: 10 }}>{t("FILTERS")}</div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 10,
+              gridTemplateColumns: "1fr 1fr 1.3fr",
+              gap: 12,
               alignItems: "end",
             }}
           >
-            <label style={{ display: "grid", gap: 6 }}>
-              <span style={{ fontSize: 12, color: "#475569" }}>{t("MARKET")}</span>
-              <MarketToggle value={market} onChange={setMarket} t={t} />
-            </label>
+            {/* Market */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#334155", marginBottom: 6 }}>
+                {t("MARKET")}
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => setMarket("us")}
+                  style={{
+                    flex: 1,
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 12,
+                    padding: "10px 12px",
+                    background: market === "us" ? "#0f172a" : "#fff",
+                    color: market === "us" ? "#fff" : "#0f172a",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("MARKET_US")}
+                </button>
+                <button
+                  onClick={() => setMarket("sa")}
+                  style={{
+                    flex: 1,
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 12,
+                    padding: "10px 12px",
+                    background: market === "sa" ? "#0f172a" : "#fff",
+                    color: market === "sa" ? "#fff" : "#0f172a",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("MARKET_SA")}
+                </button>
+              </div>
+            </div>
 
-            <label style={{ display: "grid", gap: 6 }}>
-              <span style={{ fontSize: 12, color: "#475569" }}>{t("INDUSTRY")}</span>
+            {/* Industry */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#334155", marginBottom: 6 }}>
+                {t("INDUSTRY")}
+              </div>
               <select
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
                 style={{
                   width: "100%",
-                  border: "1px solid #d1d5db",
+                  border: "1px solid #e5e7eb",
                   borderRadius: 12,
                   padding: "10px 12px",
                   background: "#fff",
+                  fontWeight: 700,
                 }}
               >
                 <option value="all">{t("INDUSTRY_ALL")}</option>
-                {industryOptions.map((ind) => (
-                  <option key={ind} value={ind}>
-                    {ind}
+                {industryOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
 
-            <label style={{ display: "grid", gap: 6 }}>
-              <span style={{ fontSize: 12, color: "#475569" }}>{t("SEARCH")}</span>
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={t("SEARCH_PLACEHOLDER")}
-                style={{
-                  width: "100%",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  background: "#fff",
-                }}
-              />
-            </label>
-
-            <button
-              onClick={() => {
-                setIndustry("all");
-                setQ("");
-              }}
-              style={{
-                width: "100%",
-                border: "1px solid #d1d5db",
-                borderRadius: 12,
-                padding: "10px 12px",
-                background: "#f3f4f6",
-                cursor: "pointer",
-                fontWeight: 800,
-              }}
-            >
-              {t("RESET")}
-            </button>
+            {/* Search */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#334155", marginBottom: 6 }}>
+                {t("SEARCH")}
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder={t("SEARCH_PLACEHOLDER")}
+                  style={{
+                    flex: 1,
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 12,
+                    padding: "10px 12px",
+                    background: "#fff",
+                    fontWeight: 600,
+                  }}
+                />
+                <button
+                  onClick={resetFilters}
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 12,
+                    padding: "10px 14px",
+                    background: "#f8fafc",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    minWidth: 96,
+                  }}
+                >
+                  {t("RESET")}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Results */}
+        {/* Companies */}
         <div
           style={{
             marginTop: 16,
@@ -296,42 +330,32 @@ export default function Home() {
             boxShadow: "0 1px 10px rgba(0,0,0,0.04)",
           }}
         >
-          <div style={{ fontWeight: 900, color: "#111827" }}>
+          <div style={{ fontWeight: 900, marginBottom: 10 }}>
             {t("COMPANIES")} ({filtered.length})
           </div>
 
           {state.loading ? (
-            <div style={{ padding: 14, color: "#475569" }}>{t("LOADING")}</div>
+            <div style={{ color: "#64748b" }}>{t("LOADING")}</div>
           ) : state.error ? (
-            <div style={{ padding: 14, color: "#b91c1c" }}>{state.error}</div>
+            <div style={{ color: "#b91c1c" }}>{state.error}</div>
           ) : filtered.length === 0 ? (
-            <div style={{ padding: 14, color: "#475569" }}>{t("NO_RESULTS")}</div>
+            <div style={{ color: "#64748b" }}>{t("NO_MATCH")}</div>
           ) : (
-            <div
-              style={{
-                marginTop: 12,
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                gap: 12,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
               {filtered.map((it) => (
                 <button
-                  key={`${it.market || market}_${it.ticker}`}
-                  onClick={() => navigate(`/stock/${encodeURIComponent(it.ticker)}`)}
+                  key={`${it.ticker}-${it.market}`}
+                  onClick={() => goToStock(it.ticker)}
                   style={{
                     textAlign: "start",
                     border: "1px solid #e5e7eb",
-                    borderRadius: 16,
-                    padding: 14,
+                    borderRadius: 14,
+                    padding: 12,
                     background: "#fff",
                     cursor: "pointer",
-                    boxShadow: "0 1px 10px rgba(0,0,0,0.03)",
                   }}
                 >
-                  <div style={{ fontSize: 14, fontWeight: 900, color: "#0f172a" }}>
-                    {it.name || it.ticker}
-                  </div>
+                  <div style={{ fontWeight: 900, color: "#0f172a" }}>{it.name}</div>
                   <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
                     <span style={{ fontWeight: 900, color: "#111827" }}>{t("TICKER")}:</span> {it.ticker}
                     {it.industry ? (
@@ -346,18 +370,19 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        <footer
+          style={{
+            marginTop: 24,
+            padding: "14px 4px",
+            textAlign: "center",
+            color: "#64748b",
+            fontSize: 12,
+          }}
+        >
+          © Trueprice.cash
+        </footer>
       </div>
-      <footer
-        style={{
-        marginTop: 24,
-         padding: "14px 4px",
-          textAlign: "center",
-          color: "#64748b",
-       fontSize: 12,
-        }}
-       >
-      © Trueprice.cash
-      </footer>
     </div>
   );
 }

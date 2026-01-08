@@ -1,0 +1,55 @@
+{
+  "ticker": "A",
+  "fetchedAt": "2026-01-08T20:05:17.564Z",
+  "years": [
+    {
+      "year": "2021",
+      "revenue": 5339000000,
+      "operatingIncome": 846000000,
+      "netIncome": 719000000,
+      "totalEquity": 4873000000,
+      "freeCashFlow": 802000000
+    },
+    {
+      "year": "2022",
+      "revenue": 6319000000,
+      "operatingIncome": 1347000000,
+      "netIncome": 1210000000,
+      "totalEquity": 5389000000,
+      "freeCashFlow": 1297000000
+    },
+    {
+      "year": "2023",
+      "revenue": 6848000000,
+      "operatingIncome": 1618000000,
+      "netIncome": 1254000000,
+      "totalEquity": 5305000000,
+      "freeCashFlow": 1021000000
+    },
+    {
+      "year": "2024",
+      "revenue": 6833000000,
+      "operatingIncome": 1350000000,
+      "netIncome": 1240000000,
+      "totalEquity": 5845000000,
+      "freeCashFlow": 1474000000
+    },
+    {
+      "year": "2025",
+      "revenue": 6510000000,
+      "operatingIncome": 1488000000,
+      "netIncome": 1289000000,
+      "totalEquity": 5898000000,
+      "freeCashFlow": 1373000000
+    },
+    {
+      "year": "2026",
+      "revenue": 6948000000,
+      "operatingIncome": 1479000000,
+      "netIncome": 1303000000,
+      "totalEquity": 6741000000,
+      "freeCashFlow": 1152000000
+    }
+  ],
+  "warnings": []
+}

@@ -1,4 +1,3 @@
-// FILE: client/src/i18n.jsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const I18nContext = createContext(null);
@@ -12,6 +11,7 @@ const dict = {
     REPORT: "Financial Analysis Report",
     DASHBOARD: "Financial Analysis — Dashboard",
     CONTACT_US: "Contact us",
+    ABOUT_US: "About us",
     TICKER: "Ticker",
     REPORT_DATE: "Report date",
     PRICE: "Price",
@@ -35,55 +35,42 @@ const dict = {
     NO_MATCH: "No matching companies.",
 
     // Stock section titles
-    EXEC_SUM: "1. Executive summary",
-    FAIR_VALUE_SECTION: "2. Fair value analysis",
-    REV_INC_TITLE: "3. Revenue & income (USD)",
-    EQUITY_FCF_TITLE: "4. Equity & free cash flow (USD)",
-    APPENDIX: "Appendix: financial statements (all years)",
+    EXEC_SUM: "1. Executive Summary",
+    FAIR_VALUE_SECTION: "2. Fair Value Analysis",
+    REV_INC_TITLE: "3. Revenue & Income (USD)",
+    EQUITY_FCF_TITLE: "4. Equity & Free Cash Flow (USD)",
+    APPENDIX: "Appendix: Financial statements (all years)",
 
     // Metrics/labels
     REV_GROWTH: "Revenue growth",
-    OP_INCOME: "Operating income",
-    NET_INCOME: "Net income",
-    FCF: "Free cash flow",
-    STOCK_VALUATION: "Stock valuation",
-    CUR_PRICE: "Current price",
-    FAIR_AVG: "Fair value (avg)",
-    VAL_METHODS: "Valuation methods",
-    EV_SHARE: "EV / share",
-    PS_BASED: "P/S based",
-    PE_BASED: "P/E based",
-    EQUITY_PER_SHARE: "Equity per share",
-    YEAR: "Year",
-    REVENUE: "Revenue",
-    TOTAL_EQUITY: "Total equity",
-
-    // States
-    ERR_STATEMENTS: "Failed to load statements.",
-    ERR_VALUATION: "Failed to load valuation.",
-
-    // Derived text
-    UP: "up",
-    DOWN: "down",
-    FLAT: "flat",
-    NO_DATA: "no data",
-    FAIR_ABBR: "fair",
-
-    // Trend labels
-    TREND: "Trend",
-    UPTREND: "Uptrend",
-    DOWNTREND: "Downtrend",
-    NEUTRAL: "Neutral",
+    REV_CAGR: "Revenue CAGR",
+    OP_MARGIN: "Operating margin",
+    NET_MARGIN: "Net margin",
+    FCF_MARGIN: "FCF margin",
+    EQUITY_GROWTH: "Equity growth",
+    FCF_GROWTH: "FCF growth",
+    FAIR_VALUE: "Fair value",
+    UPSIDE: "Upside",
+    EV_SALES: "EV/Sales",
+    PE: "P/E",
+    PS: "P/S",
+    MARKET_CAP: "Market cap",
+    ENTERPRISE_VALUE: "Enterprise value",
+    EV_PER_SHARE: "EV per share",
+    METHOD: "Method",
+    VALUE: "Value",
+    NOTES: "Notes",
   },
 
   ar: {
-    EN: "إنج",
-    AR: "عر",
+    EN: "EN",
+    AR: "AR",
 
     // Shared
     REPORT: "تقرير التحليل المالي",
     DASHBOARD: "لوحة التحليل المالي",
     CONTACT_US: "اتصل بنا",
+    ABOUT_US: "من نحن",
     TICKER: "الرمز",
     REPORT_DATE: "تاريخ التقرير",
     PRICE: "السعر",
@@ -115,67 +102,41 @@ const dict = {
 
     // Metrics/labels
     REV_GROWTH: "نمو الإيرادات",
-    OP_INCOME: "دخل العمليات",
-    NET_INCOME: "صافي الدخل",
-    FCF: "التدفق النقدي الحر",
-    STOCK_VALUATION: "تقييم السهم",
-    CUR_PRICE: "السعر الحالي",
-    FAIR_AVG: "القيمة العادلة (متوسط)",
-    VAL_METHODS: "طرق التقييم",
-    EV_SHARE: "القيمة المنشأة / سهم",
-    PS_BASED: "مضاعف المبيعات",
-    PE_BASED: "مضاعف الربحية",
-    EQUITY_PER_SHARE: "حقوق الملكية / سهم",
-    YEAR: "السنة",
-    REVENUE: "الإيرادات",
-    TOTAL_EQUITY: "إجمالي حقوق الملكية",
-
-    // States
-    ERR_STATEMENTS: "فشل تحميل القوائم المالية.",
-    ERR_VALUATION: "فشل تحميل التقييم.",
-
-    // Derived text
-    UP: "ارتفاع",
-    DOWN: "انخفاض",
-    FLAT: "ثبات",
-    NO_DATA: "لا توجد بيانات",
-    FAIR_ABBR: "عادل",
-
-    // Trend labels
-    TREND: "الاتجاه",
-    UPTREND: "اتجاه صاعد",
-    DOWNTREND: "اتجاه هابط",
-    NEUTRAL: "محايد",
+    REV_CAGR: "معدل النمو السنوي المركب للإيرادات",
+    OP_MARGIN: "هامش التشغيل",
+    NET_MARGIN: "هامش صافي الربح",
+    FCF_MARGIN: "هامش التدفق النقدي الحر",
+    EQUITY_GROWTH: "نمو حقوق الملكية",
+    FCF_GROWTH: "نمو التدفق النقدي الحر",
+    FAIR_VALUE: "القيمة العادلة",
+    UPSIDE: "الصعود المتوقع",
+    EV_SALES: "قيمة المنشأة/المبيعات",
+    PE: "مكرر الربحية",
+    PS: "مكرر المبيعات",
+    MARKET_CAP: "القيمة السوقية",
+    ENTERPRISE_VALUE: "قيمة المنشأة",
+    EV_PER_SHARE: "قيمة المنشأة للسهم",
+    METHOD: "الطريقة",
+    VALUE: "القيمة",
+    NOTES: "ملاحظات",
   },
 };
 
-function detectInitialLang() {
-  try {
-    const saved = localStorage.getItem("lang");
-    if (saved === "en" || saved === "ar") return saved;
-    const nav = (navigator.language || "").toLowerCase();
-    return nav.startsWith("ar") ? "ar" : "en";
-  } catch {
-    return "en";
-  }
-}
-
 export function I18nProvider({ children }) {
-  const [lang, setLang] = useState(detectInitialLang());
+  const [lang, setLang] = useState(() => {
+    const v = localStorage.getItem("lang");
+    return v === "ar" ? "ar" : "en";
+  });
 
   useEffect(() => {
-    try {
-      document.documentElement.lang = lang;
-      document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
-      localStorage.setItem("lang", lang);
-    } catch {
-      // ignore
-    }
+    localStorage.setItem("lang", lang);
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   }, [lang]);
 
   const t = useMemo(() => {
-    const table = dict[lang] || dict.en;
-    return (k) => table[k] ?? dict.en[k] ?? k;
+    const L = dict[lang] || dict.en;
+    return (key) => L[key] || dict.en[key] || key;
   }, [lang]);
 
   const value = useMemo(

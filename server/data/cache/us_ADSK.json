@@ -1,0 +1,58 @@
+{
+  "ticker": "ADSK",
+  "fetchedAt": "2026-01-08T20:06:24.565Z",
+  "years": [
+    {
+      "year": "2020",
+      "totalEquity": -210900000
+    },
+    {
+      "year": "2021",
+      "revenue": 3274300000,
+      "operatingIncome": 343500000,
+      "netIncome": 214500000,
+      "totalEquity": -139100000,
+      "freeCashFlow": 1361900000
+    },
+    {
+      "year": "2022",
+      "revenue": 3790000000,
+      "operatingIncome": 629000000,
+      "netIncome": 1208000000,
+      "totalEquity": 965500000,
+      "freeCashFlow": 1341000000
+    },
+    {
+      "year": "2023",
+      "revenue": 4386000000,
+      "operatingIncome": 618000000,
+      "netIncome": 497000000,
+      "totalEquity": 849000000,
+      "freeCashFlow": 1464000000
+    },
+    {
+      "year": "2024",
+      "revenue": 5005000000,
+      "operatingIncome": 989000000,
+      "netIncome": 823000000,
+      "totalEquity": 1145000000,
+      "freeCashFlow": 2025000000
+    },
+    {
+      "year": "2025",
+      "revenue": 0,
+      "operatingIncome": 0,
+      "netIncome": 0,
+      "freeCashFlow": 0
+    },
+    {
+      "year": "2026",
+      "revenue": 6131000000,
+      "operatingIncome": 1369000000,
+      "netIncome": 1112000000,
+      "totalEquity": 2621000000,
+      "freeCashFlow": 1505000000
+    }
+  ],
+  "warnings": []
+}
