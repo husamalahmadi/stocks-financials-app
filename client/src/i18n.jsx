@@ -1,3 +1,4 @@
+// FILE: client/src/i18n.jsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const I18nContext = createContext(null);
@@ -8,8 +9,8 @@ const dict = {
     AR: "AR",
 
     // Shared
-    REPORT: "Financial Analysis Report",
-    DASHBOARD: "Financial Analysis — Dashboard",
+    REPORT: "Trueprice.cash Financial Report",
+    DASHBOARD: "Trueprice.cash",
     CONTACT_US: "Contact us",
     ABOUT_US: "About us",
     TICKER: "Ticker",
@@ -17,6 +18,16 @@ const dict = {
     PRICE: "Price",
     LOADING: "Loading…",
     N_A: "N/A",
+    NO_DATA: "No data",
+
+    // Trend words (some components may use these)
+    UP: "Uptrend",
+    DOWN: "Downtrend",
+    FLAT: "Stable",
+    UPTREND: "Uptrend",
+    DOWNTREND: "Downtrend",
+    NEUTRAL: "Stable",
+    TREND: "Trend",
 
     // Home
     FILTERS: "Filters",
@@ -41,7 +52,7 @@ const dict = {
     EQUITY_FCF_TITLE: "4. Equity & Free Cash Flow (USD)",
     APPENDIX: "Appendix: Financial statements (all years)",
 
-    // Metrics/labels
+    // Metrics / labels (existing)
     REV_GROWTH: "Revenue growth",
     REV_CAGR: "Revenue CAGR",
     OP_MARGIN: "Operating margin",
@@ -60,6 +71,28 @@ const dict = {
     METHOD: "Method",
     VALUE: "Value",
     NOTES: "Notes",
+
+    // ✅ Missing keys your Stock.jsx uses
+    REVENUE: "Revenue",
+    OP_INCOME: "Operating income",
+    NET_INCOME: "Net income",
+    FCF: "Free cash flow",
+    TOTAL_EQUITY: "Total equity",
+    YEAR: "Year",
+
+    CUR_PRICE: "Current price",
+    FAIR_AVG: "Fair value (avg)",
+    FAIR_ABBR: "FV",
+
+    VAL_METHODS: "Valuation methods",
+    EV_SHARE: "EV / share",
+    PS_BASED: "P/S based",
+    PE_BASED: "P/E based",
+    EQUITY_PER_SHARE: "Equity per share",
+
+    // Optional namespaces (supported by resolver)
+    labels: {},
+    metrics: {},
   },
 
   ar: {
@@ -67,8 +100,8 @@ const dict = {
     AR: "AR",
 
     // Shared
-    REPORT: "تقرير التحليل المالي",
-    DASHBOARD: "لوحة التحليل المالي",
+    REPORT: "تقرير Trueprice.cash المالي",
+    DASHBOARD: "Trueprice.cash",
     CONTACT_US: "اتصل بنا",
     ABOUT_US: "من نحن",
     TICKER: "الرمز",
@@ -76,6 +109,16 @@ const dict = {
     PRICE: "السعر",
     LOADING: "جاري التحميل…",
     N_A: "غير متاح",
+    NO_DATA: "لا توجد بيانات",
+
+    // Trend words
+    UP: "اتجاه صاعد",
+    DOWN: "اتجاه هابط",
+    FLAT: "مستقر",
+    UPTREND: "اتجاه صاعد",
+    DOWNTREND: "اتجاه هابط",
+    NEUTRAL: "مستقر",
+    TREND: "الاتجاه",
 
     // Home
     FILTERS: "المرشحات",
@@ -100,7 +143,7 @@ const dict = {
     EQUITY_FCF_TITLE: "٤. حقوق الملكية والتدفق النقدي الحر (دولار)",
     APPENDIX: "الملحق: القوائم المالية (كل السنوات)",
 
-    // Metrics/labels
+    // Metrics / labels (existing)
     REV_GROWTH: "نمو الإيرادات",
     REV_CAGR: "معدل النمو السنوي المركب للإيرادات",
     OP_MARGIN: "هامش التشغيل",
@@ -119,8 +162,60 @@ const dict = {
     METHOD: "الطريقة",
     VALUE: "القيمة",
     NOTES: "ملاحظات",
+
+    // ✅ Missing keys your Stock.jsx uses
+    REVENUE: "الإيرادات",
+    OP_INCOME: "الدخل التشغيلي",
+    NET_INCOME: "صافي الدخل",
+    FCF: "التدفق النقدي الحر",
+    TOTAL_EQUITY: "إجمالي حقوق الملكية",
+    YEAR: "السنة",
+
+    CUR_PRICE: "السعر الحالي",
+    FAIR_AVG: "القيمة العادلة (متوسط)",
+    FAIR_ABBR: "ق.ع",
+
+    VAL_METHODS: "طرق التقييم",
+    EV_SHARE: "قيمة المنشأة للسهم",
+    PS_BASED: "بناءً على مكرر المبيعات",
+    PE_BASED: "بناءً على مكرر الربحية",
+    EQUITY_PER_SHARE: "حقوق الملكية للسهم",
+
+    // Optional namespaces (supported by resolver)
+    labels: {},
+    metrics: {},
   },
 };
+
+function getByPath(obj, key) {
+  if (!obj || !key) return undefined;
+  if (!key.includes(".")) return obj[key];
+  return key.split(".").reduce((acc, k) => (acc && acc[k] != null ? acc[k] : undefined), obj);
+}
+
+function resolveKey(langObj, key) {
+  if (!langObj) return undefined;
+
+  // 1) direct flat key
+  const direct = getByPath(langObj, key);
+  if (direct != null) return direct;
+
+  // 2) allow calling t("labels.X") / t("metrics.X")
+  const inLabelsByPath = getByPath(langObj.labels, key);
+  if (inLabelsByPath != null) return inLabelsByPath;
+
+  const inMetricsByPath = getByPath(langObj.metrics, key);
+  if (inMetricsByPath != null) return inMetricsByPath;
+
+  // 3) allow calling t("X") while X exists inside labels/metrics
+  const inLabels = langObj.labels?.[key];
+  if (inLabels != null) return inLabels;
+
+  const inMetrics = langObj.metrics?.[key];
+  if (inMetrics != null) return inMetrics;
+
+  return undefined;
+}
 
 export function I18nProvider({ children }) {
   const [lang, setLang] = useState(() => {
@@ -135,8 +230,17 @@ export function I18nProvider({ children }) {
   }, [lang]);
 
   const t = useMemo(() => {
-    const L = dict[lang] || dict.en;
-    return (key) => L[key] || dict.en[key] || key;
+    const current = dict[lang] || dict.en;
+
+    return (key) => {
+      const v1 = resolveKey(current, key);
+      if (v1 != null) return v1;
+
+      const v2 = resolveKey(dict.en, key);
+      if (v2 != null) return v2;
+
+      return key;
+    };
   }, [lang]);
 
   const value = useMemo(
