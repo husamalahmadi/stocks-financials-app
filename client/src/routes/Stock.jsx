@@ -2,14 +2,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useI18n } from "../i18n.jsx";
-
-/* API base */
-function getApiBase() {
-  const env = (import.meta.env.VITE_API_BASE || "").trim();
-  if (env) return env.replace(/\/+$/, "");
-  return ""; // use same-origin "/api" (Vite proxy handles dev; rewrites can handle prod)
-}
-const API_BASE = getApiBase();
+import { getCompany } from "../data/stocksCatalog.js";
+import { getLivePrice } from "../services/priceService.js";
+import { getFinancialsCached } from "../services/financialsService.js";
+import { computeValuation } from "../domain/valuation.js";
 
 /* Formatting */
 function fmt2(n) {
@@ -58,8 +54,7 @@ function trendText(series, t) {
   const { kind, pct } = calcTrend(series);
   if (kind === "no_data") return t("NO_DATA");
 
-  const word =
-    kind === "up" ? t("UPTREND") : kind === "down" ? t("DOWNTREND") : t("NEUTRAL");
+  const word = kind === "up" ? t("UPTREND") : kind === "down" ? t("DOWNTREND") : t("NEUTRAL");
 
   return `${word} · ${fmt2(Math.abs(pct))}%`;
 }
@@ -236,19 +231,14 @@ export default function Stock() {
       try {
         setHeaderError("");
 
-        const c = await fetch(`${API_BASE}/api/company/${encodeURIComponent(ticker)}`);
-        const cj = await c.json();
+        const cj = await getCompany(ticker);
         if (!alive) return;
 
         setCompany(cj?.name || "");
         setMarket(cj?.market || "us");
         setCurrency(cj?.currency || "USD");
 
-        const p = await fetch(
-          `${API_BASE}/api/price/${encodeURIComponent(ticker)}?market=${encodeURIComponent(cj?.market || "us")}`,
-          { cache: "no-store" }
-        );
-        const pj = await p.json();
+        const pj = await getLivePrice({ ticker, market: cj?.market || "us" });
         if (!alive) return;
 
         setPrice(Number(pj?.price));
@@ -264,15 +254,14 @@ export default function Stock() {
     };
   }, [ticker]);
 
-  /* Financial statements */
+  /* Financial statements (browser cached) */
   useEffect(() => {
     let alive = true;
 
     async function run() {
       try {
         setFin({ loading: true, error: "", data: null });
-        const r = await fetch(`${API_BASE}/api/financials/${encodeURIComponent(ticker)}`);
-        const j = await r.json();
+        const j = await getFinancialsCached({ ticker });
         if (!alive) return;
         setFin({ loading: false, error: "", data: j });
       } catch (e) {
@@ -307,11 +296,7 @@ export default function Stock() {
           return;
         }
 
-        const r = await fetch(
-          `${API_BASE}/api/valuation/${encodeURIComponent(ticker)}?market=${encodeURIComponent(marketHint)}`,
-          { cache: "no-store" }
-        );
-        const j = await r.json();
+        const j = await computeValuation({ ticker, market: marketHint });
         sessionStorage.setItem(k, JSON.stringify(j));
         if (!alive) return;
         setVal({ loading: false, error: "", data: j });
@@ -342,7 +327,9 @@ export default function Stock() {
 
   const fair = val?.data;
   const fairAvg = useMemo(() => {
-    const arr = [fair?.fairEV, fair?.fairPS, fair?.fairPE].filter((n) => Number.isFinite(n));
+    const arr = [fair?.fairEV, fair?.fairPS, fair?.fairPE]
+      .map((n) => Number(n))
+      .filter((n) => Number.isFinite(n));
     if (!arr.length) return null;
     return arr.reduce((s, n) => s + n, 0) / arr.length;
   }, [fair]);
@@ -507,17 +494,18 @@ export default function Stock() {
           )}
         </Card>
       </div>
-          <footer
-            style={{
-              marginTop: 24,
-              padding: "14px 4px",
-              textAlign: "center",
-              color: "#64748b",
-              fontSize: 12,
-            }}
-              >
-                © Trueprice.cash
-        </footer>
+
+      <footer
+        style={{
+          marginTop: 24,
+          padding: "14px 4px",
+          textAlign: "center",
+          color: "#64748b",
+          fontSize: 12,
+        }}
+      >
+        © Trueprice.cash
+      </footer>
     </div>
   );
 }

@@ -1,15 +1,9 @@
+
+// FILE: client/src/routes/Home.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n.jsx";
-
-/* -------- API base (self-contained) -------- */
-function getApiBase() {
-  const env = (import.meta.env.VITE_API_BASE || "").trim();
-  if (env) return env.replace(/\/+$/, "");
-  return "";
-}
-
-const API_BASE = getApiBase();
+import { getStocks } from "../data/stocksCatalog.js";
 
 function normalize(s) {
   return (s || "").toString().trim().toLowerCase();
@@ -62,11 +56,7 @@ export default function Home() {
       try {
         setState((s) => ({ ...s, loading: true, error: "" }));
 
-        const url = `${API_BASE}/api/stocks?market=${encodeURIComponent(market)}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-
-        const json = await res.json();
+        const json = await getStocks({ market });
         if (!alive) return;
 
         setState({
@@ -344,7 +334,7 @@ export default function Home() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
               {filtered.map((it) => (
                 <button
-                  key={`${it.ticker}-${it.market}`}
+                  key={`${it.ticker}-${it.market || market}`}
                   onClick={() => goToStock(it.ticker)}
                   style={{
                     textAlign: "start",

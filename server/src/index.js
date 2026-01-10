@@ -24,7 +24,7 @@ app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
-const PORT = process.env.PORT || 5175;
+const PORT = process.env.PORT || 3000;
 const BASE = "https://api.twelvedata.com";
 const API_KEY = process.env.TWELVEDATA_API_KEY || "5da413057f75498490b0303582e0d0de";
 
