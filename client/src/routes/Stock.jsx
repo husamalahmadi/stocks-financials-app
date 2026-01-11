@@ -2,6 +2,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useI18n } from "../i18n.jsx";
+import { usePrefetchDelay } from "../hooks/usePrefetchDelay.js";
+
+// These must already exist in your client-only version:
 import { getCompany } from "../data/stocksCatalog.js";
 import { getLivePrice } from "../services/priceService.js";
 import { getFinancialsCached } from "../services/financialsService.js";
@@ -13,7 +16,6 @@ function fmt2(n) {
   if (!Number.isFinite(x)) return "—";
   return x.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
-
 function fmtBill(n) {
   const x = Number(n);
   if (!Number.isFinite(x)) return "—";
@@ -31,35 +33,27 @@ function sortSeries(series) {
     .map((p) => ({ label: String(p.label), value: Number(p.value) }))
     .sort((a, b) => Number(a.label) - Number(b.label));
 }
-
 function calcTrend(series, { neutralThresholdPct = 2 } = {}) {
   const data = sortSeries(series);
   if (data.length < 2) return { kind: "no_data", pct: null };
 
-  const first = data[0]?.value;
-  const last = data[data.length - 1]?.value;
-
-  if (!Number.isFinite(first) || !Number.isFinite(last)) return { kind: "no_data", pct: null };
-
-  const denom = Math.max(Math.abs(first), Math.abs(last), 1);
+  const first = data[0].value;
+  const last = data[data.length - 1].value;
+  const denom = Math.max(Math.abs(first), 1);
   const pct = ((last - first) / denom) * 100;
 
   if (!Number.isFinite(pct)) return { kind: "no_data", pct: null };
   if (Math.abs(pct) < neutralThresholdPct) return { kind: "neutral", pct };
-
   return { kind: pct > 0 ? "up" : "down", pct };
 }
-
 function trendText(series, t) {
   const { kind, pct } = calcTrend(series);
   if (kind === "no_data") return t("NO_DATA");
-
   const word = kind === "up" ? t("UPTREND") : kind === "down" ? t("DOWNTREND") : t("NEUTRAL");
-
   return `${word} · ${fmt2(Math.abs(pct))}%`;
 }
 
-/* Small layout atoms */
+/* UI atoms */
 function Card({ title, children, style }) {
   return (
     <section
@@ -117,6 +111,7 @@ function CompareBar({ current, fair, currency, dir = "ltr", t }) {
   const max = Math.max(cur, fv, 1);
   const curPct = (cur / max) * 100;
   const fairPct = (fv / max) * 100;
+
   return (
     <div style={{ width: 260, display: "grid", gap: 6 }}>
       <div
@@ -164,6 +159,7 @@ function LineChart({ title, series, w = 380, dir = "ltr" }) {
   if (!data.length) return <div style={{ fontSize: 12, color: "#6b7280" }}>{title}: —</div>;
 
   const xs = (i) => pad.l + (i * iw) / Math.max(1, data.length - 1);
+
   const vals = data.map((d) => d.value);
   let min = Math.min(...vals);
   let max = Math.max(...vals);
@@ -172,6 +168,7 @@ function LineChart({ title, series, w = 380, dir = "ltr" }) {
     min -= d;
     max += d;
   }
+
   const ys = (v) => pad.t + (1 - (v - min) / (max - min)) * ih;
   const dAttr = data.map((p, i) => `${i ? "L" : "M"} ${xs(i)} ${ys(p.value)}`).join(" ");
 
@@ -211,106 +208,108 @@ export default function Stock() {
   const { ticker } = useParams();
   const { t, lang, dir, toggleLang } = useI18n();
 
+  const delayMs = Number(import.meta.env.VITE_PREFETCH_DELAY_MS || 5000);
+  const { ready, secondsLeft } = usePrefetchDelay(delayMs, ticker);
+
   const [company, setCompany] = useState("");
   const [market, setMarket] = useState("us");
   const [currency, setCurrency] = useState("USD");
   const [price, setPrice] = useState(null);
-
   const [headerError, setHeaderError] = useState("");
 
-  const [fin, setFin] = useState({ loading: true, error: "", data: null });
-  const [val, setVal] = useState({ loading: true, error: "", data: null });
+  const [fin, setFin] = useState({ loading: false, error: "", data: null });
+  const [val, setVal] = useState({ loading: false, error: "", data: null });
 
   const reportDate = useMemo(() => new Date().toLocaleDateString(), []);
+  const waitText = !ready ? `${t("WAITING_BEFORE_FETCH")} ${secondsLeft}s…` : "";
 
-  /* Company + Price */
+  // Company info: immediate (no TwelveData)
   useEffect(() => {
     let alive = true;
-
-    async function run() {
+    (async () => {
       try {
         setHeaderError("");
-
         const cj = await getCompany(ticker);
         if (!alive) return;
-
         setCompany(cj?.name || "");
         setMarket(cj?.market || "us");
         setCurrency(cj?.currency || "USD");
-
-        const pj = await getLivePrice({ ticker, market: cj?.market || "us" });
+      } catch (e) {
         if (!alive) return;
+        setHeaderError(String(e?.message || e));
+      }
+    })();
+    return () => { alive = false; };
+  }, [ticker]);
 
+  // Price: delayed, LIVE ONLY (no cache)
+  useEffect(() => {
+    let alive = true;
+    if (!ready) {
+      setPrice(null);
+      return () => { alive = false; };
+    }
+
+    (async () => {
+      try {
+        setHeaderError("");
+        const pj = await getLivePrice({ ticker, market, cache: "no-store" });
+        if (!alive) return;
         setPrice(Number(pj?.price));
       } catch (e) {
         if (!alive) return;
         setHeaderError(String(e?.message || e));
       }
-    }
+    })();
 
-    run();
-    return () => {
-      alive = false;
-    };
-  }, [ticker]);
+    return () => { alive = false; };
+  }, [ready, ticker, market]);
 
-  /* Financial statements (browser cached) */
+  // Financial statements: delayed, KEEP cached (your requirement)
   useEffect(() => {
     let alive = true;
+    if (!ready) {
+      setFin({ loading: false, error: "", data: null });
+      return () => { alive = false; };
+    }
 
-    async function run() {
+    (async () => {
       try {
         setFin({ loading: true, error: "", data: null });
-        const j = await getFinancialsCached({ ticker });
+        const j = await getFinancialsCached({ ticker, market });
         if (!alive) return;
         setFin({ loading: false, error: "", data: j });
       } catch (e) {
         if (!alive) return;
         setFin({ loading: false, error: t("ERR_STATEMENTS"), data: null });
       }
-    }
+    })();
 
-    run();
-    return () => {
-      alive = false;
-    };
-  }, [ticker, t]);
+    return () => { alive = false; };
+  }, [ready, ticker, market, t]);
 
-  /* Valuation (sessionStorage cached) */
+  // Valuation: delayed, LIVE ONLY (no cache)
   useEffect(() => {
     let alive = true;
+    if (!ready) {
+      setVal({ loading: false, error: "", data: null });
+      return () => { alive = false; };
+    }
 
-    async function run() {
+    (async () => {
       try {
         setVal({ loading: true, error: "", data: null });
-
-        const marketHint =
-          (fin?.data && typeof fin.data.market === "string" && fin.data.market) || market || "us";
-
-        const k = `session_val_${marketHint}_${ticker}`;
-        const cached = sessionStorage.getItem(k);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (!alive) return;
-          setVal({ loading: false, error: "", data: parsed });
-          return;
-        }
-
-        const j = await computeValuation({ ticker, market: marketHint });
-        sessionStorage.setItem(k, JSON.stringify(j));
+        const j = await computeValuation({ ticker, market, cache: "no-store" });
         if (!alive) return;
         setVal({ loading: false, error: "", data: j });
       } catch (e) {
         if (!alive) return;
         setVal({ loading: false, error: t("ERR_VALUATION"), data: null });
       }
-    }
+    })();
 
-    run();
-    return () => {
-      alive = false;
-    };
-  }, [ticker, fin, market, t]);
+    return () => { alive = false; };
+  }, [ready, ticker, market, t]);
 
   const years = useMemo(() => fin?.data?.years || [], [fin]);
   const toSeries = (k) =>
@@ -353,10 +352,11 @@ export default function Stock() {
           }}
         >
           <div style={{ display: "grid", gap: 2 }}>
-              <div style={{ fontSize: 18, fontWeight: 900 }}>{t("REPORT")}</div>
-              <div style={{ fontSize: 13, color: "#cbd5e1" }}>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>{t("REPORT")}</div>
+            <div style={{ fontSize: 13, color: "#cbd5e1" }}>
               <b>{t("TICKER")}:</b> {ticker} — {company || "—"} · <b>{t("REPORT_DATE")}:</b> {reportDate}
             </div>
+            {!ready ? <div style={{ fontSize: 12, color: "#e2e8f0" }}>{waitText}</div> : null}
           </div>
 
           <div style={{ marginInlineStart: "auto", display: "flex", alignItems: "center", gap: 12 }}>
@@ -364,6 +364,8 @@ export default function Stock() {
               {t("PRICE")}:{" "}
               {headerError ? (
                 <span style={{ color: "#fecaca" }}>{headerError}</span>
+              ) : !ready ? (
+                t("LOADING")
               ) : price == null ? (
                 t("LOADING")
               ) : (
@@ -376,45 +378,37 @@ export default function Stock() {
 
         {/* 1. Executive Summary */}
         <Card title={t("EXEC_SUM")}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
-            <ul style={{ margin: 0, paddingInlineStart: 18 }}>
-              <li>
-                <b>{t("REV_GROWTH")}:</b> {trendText(serRevenue, t)}
-              </li>
-              <li>
-                <b>{t("OP_INCOME")}:</b> {trendText(serOp, t)}
-              </li>
-              <li>
-                <b>{t("NET_INCOME")}:</b> {trendText(serNet, t)}
-              </li>
-              <li>
-                <b>{t("FCF")}:</b> {trendText(serFCF, t)}
-              </li>
-              <li>
-                <b>{t("STOCK_VALUATION")}:</b> {t("FAIR_ABBR")}_ABBR ≈ {fmt2(fairAvg)} {currency}
-              </li>
-            </ul>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <CompareBar current={price ?? 0} fair={fairAvg ?? 0} currency={currency} dir={dir} t={t} />
+          {!ready ? (
+            <div style={{ color: "#475569" }}>{waitText}</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
+              <ul style={{ margin: 0, paddingInlineStart: 18 }}>
+                <li><b>{t("REV_GROWTH")}:</b> {trendText(serRevenue, t)}</li>
+                <li><b>{t("OP_INCOME")}:</b> {trendText(serOp, t)}</li>
+                <li><b>{t("NET_INCOME")}:</b> {trendText(serNet, t)}</li>
+                <li><b>{t("FCF")}:</b> {trendText(serFCF, t)}</li>
+                <li><b>{t("STOCK_VALUATION")}:</b> {t("FAIR_ABBR")} ≈ {fmt2(fairAvg)} {currency}</li>
+              </ul>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <CompareBar current={price ?? 0} fair={fairAvg ?? 0} currency={currency} dir={dir} t={t} />
+              </div>
             </div>
-          </div>
+          )}
         </Card>
 
-        {/* 2. Fair value section */}
+        {/* 2. Fair value analysis */}
         <Card title={t("FAIR_VALUE_SECTION")}>
-          {val.loading ? (
+          {!ready ? (
+            <div style={{ color: "#475569" }}>{waitText}</div>
+          ) : val.loading ? (
             <div style={{ color: "#475569" }}>{t("LOADING")}</div>
           ) : val.error ? (
             <div style={{ color: "#b91c1c" }}>{val.error}</div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
               <div style={{ display: "grid", gap: 8 }}>
-                <div>
-                  <b>{t("CUR_PRICE")}:</b> {fmt2(price)} {currency}
-                </div>
-                <div>
-                  <b>{t("FAIR_AVG")}:</b> {fmt2(fairAvg)} {currency}
-                </div>
+                <div><b>{t("CUR_PRICE")}:</b> {fmt2(price)} {currency}</div>
+                <div><b>{t("FAIR_AVG")}:</b> {fmt2(fairAvg)} {currency}</div>
 
                 <div style={{ marginTop: 10, fontWeight: 900 }}>{t("VAL_METHODS")}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, maxWidth: 420 }}>
@@ -441,24 +435,34 @@ export default function Stock() {
 
         {/* 3. Revenue & Income */}
         <Card title={t("REV_INC_TITLE")}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-            <ChartBlock title={t("REVENUE")} series={serRevenue} dir={dir} t={t} />
-            <ChartBlock title={t("OP_INCOME")} series={serOp} dir={dir} t={t} />
-            <ChartBlock title={t("NET_INCOME")} series={serNet} dir={dir} t={t} />
-          </div>
+          {!ready ? (
+            <div style={{ color: "#475569" }}>{waitText}</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
+              <ChartBlock title={t("REVENUE")} series={serRevenue} dir={dir} t={t} />
+              <ChartBlock title={t("OP_INCOME")} series={serOp} dir={dir} t={t} />
+              <ChartBlock title={t("NET_INCOME")} series={serNet} dir={dir} t={t} />
+            </div>
+          )}
         </Card>
 
         {/* 4. Equity & FCF */}
         <Card title={t("EQUITY_FCF_TITLE")}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 12 }}>
-            <ChartBlock title={t("TOTAL_EQUITY")} series={serEquity} w={480} dir={dir} t={t} />
-            <ChartBlock title={t("FCF")} series={serFCF} w={480} dir={dir} t={t} />
-          </div>
+          {!ready ? (
+            <div style={{ color: "#475569" }}>{waitText}</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 12 }}>
+              <ChartBlock title={t("TOTAL_EQUITY")} series={serEquity} w={480} dir={dir} t={t} />
+              <ChartBlock title={t("FCF")} series={serFCF} w={480} dir={dir} t={t} />
+            </div>
+          )}
         </Card>
 
         {/* Appendix */}
         <Card title={t("APPENDIX")}>
-          {fin.loading ? (
+          {!ready ? (
+            <div style={{ color: "#475569" }}>{waitText}</div>
+          ) : fin.loading ? (
             <div style={{ color: "#475569" }}>{t("LOADING")}</div>
           ) : fin.error ? (
             <div style={{ color: "#b91c1c" }}>{fin.error}</div>
@@ -495,15 +499,7 @@ export default function Stock() {
         </Card>
       </div>
 
-      <footer
-        style={{
-          marginTop: 24,
-          padding: "14px 4px",
-          textAlign: "center",
-          color: "#64748b",
-          fontSize: 12,
-        }}
-      >
+      <footer style={{ marginTop: 24, padding: "14px 4px", textAlign: "center", color: "#64748b", fontSize: 12 }}>
         © Trueprice.cash
       </footer>
     </div>
