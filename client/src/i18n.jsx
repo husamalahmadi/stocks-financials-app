@@ -73,7 +73,7 @@ const dict = {
     AR: "AR",
 
     // Shared
-    REPORT: "تقرير مالي - Trueprice.cash",
+    REPORT: "Trueprice.cash - تقرير مالي",
     DASHBOARD: "Trueprice.cash",
     CONTACT_US: "اتصل بنا",
     ABOUT_US: "من نحن",

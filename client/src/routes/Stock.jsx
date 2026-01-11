@@ -353,8 +353,8 @@ export default function Stock() {
           }}
         >
           <div style={{ display: "grid", gap: 2 }}>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>Trueprice.cash Financial Report</div>
-            <div style={{ fontSize: 13, color: "#cbd5e1" }}>
+              <div style={{ fontSize: 18, fontWeight: 900 }}>{t("REPORT")}</div>
+              <div style={{ fontSize: 13, color: "#cbd5e1" }}>
               <b>{t("TICKER")}:</b> {ticker} — {company || "—"} · <b>{t("REPORT_DATE")}:</b> {reportDate}
             </div>
           </div>
