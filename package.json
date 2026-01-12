@@ -1,12 +1,20 @@
-
 {
-  "name": "stocks-financials-app",
+  "name": "stocks-financials-client",
   "private": true,
-  "workspaces": ["client"],
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "dev": "npm --workspace client run dev",
-    "build": "npm --workspace client run build",
-    "preview": "npm --workspace client run preview",
-    "install-all": "npm --workspace client install"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.26.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "vite": "^5.4.0"
   }
 }
