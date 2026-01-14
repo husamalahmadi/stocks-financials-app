@@ -4,7 +4,6 @@ import { useParams } from "react-router-dom";
 import { useI18n } from "../i18n.jsx";
 import { usePrefetchDelay } from "../hooks/usePrefetchDelay.js";
 
-// These must already exist in your client-only version:
 import { getCompany } from "../data/stocksCatalog.js";
 import { getLivePrice } from "../services/priceService.js";
 import { getFinancialsCached } from "../services/financialsService.js";
@@ -51,6 +50,34 @@ function trendText(series, t) {
   if (kind === "no_data") return t("NO_DATA");
   const word = kind === "up" ? t("UPTREND") : kind === "down" ? t("DOWNTREND") : t("NEUTRAL");
   return `${word} · ${fmt2(Math.abs(pct))}%`;
+}
+
+/* Zero/bad-data detection */
+const EPS = 1e-9;
+function isZeroOrBad(v) {
+  const n = Number(v);
+  return !Number.isFinite(n) || Math.abs(n) <= EPS;
+}
+function hasNonZeroSeries(series) {
+  const s = Array.isArray(series) ? series : [];
+  return s.some((p) => !isZeroOrBad(p?.value));
+}
+function hasMeaningfulFair(fair) {
+  if (!fair) return false;
+  return (
+    !isZeroOrBad(fair.fairEV) ||
+    !isZeroOrBad(fair.fairPS) ||
+    !isZeroOrBad(fair.fairPE) ||
+    !isZeroOrBad(fair.equityPerShare)
+  );
+}
+function hasMeaningfulYears(years) {
+  const ys = Array.isArray(years) ? years : [];
+  if (!ys.length) return false;
+  return ys.some((y) => {
+    const vals = [y?.revenue, y?.operatingIncome, y?.netIncome, y?.totalEquity, y?.freeCashFlow];
+    return vals.some((v) => !isZeroOrBad(v));
+  });
 }
 
 /* UI atoms */
@@ -203,6 +230,23 @@ function ChartBlock({ title, series, w, dir, t }) {
   );
 }
 
+function RetryBox({ text }) {
+  return (
+    <div
+      style={{
+        background: "#fff7ed",
+        border: "1px solid #fed7aa",
+        borderRadius: 12,
+        padding: 12,
+        color: "#9a3412",
+        fontWeight: 800,
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
 /* Page */
 export default function Stock() {
   const { ticker } = useParams();
@@ -215,6 +259,8 @@ export default function Stock() {
   const [market, setMarket] = useState("us");
   const [currency, setCurrency] = useState("USD");
   const [price, setPrice] = useState(null);
+
+  // Keep headerError for logic, but do NOT show it in the header.
   const [headerError, setHeaderError] = useState("");
 
   const [fin, setFin] = useState({ loading: false, error: "", data: null });
@@ -258,6 +304,7 @@ export default function Stock() {
         setPrice(Number(pj?.price));
       } catch (e) {
         if (!alive) return;
+        setPrice(null);
         setHeaderError(String(e?.message || e));
       }
     })();
@@ -265,7 +312,7 @@ export default function Stock() {
     return () => { alive = false; };
   }, [ready, ticker, market]);
 
-  // Financial statements: delayed, KEEP cached (your requirement)
+  // Financial statements: delayed, KEEP cached
   useEffect(() => {
     let alive = true;
     if (!ready) {
@@ -328,10 +375,37 @@ export default function Stock() {
   const fairAvg = useMemo(() => {
     const arr = [fair?.fairEV, fair?.fairPS, fair?.fairPE]
       .map((n) => Number(n))
-      .filter((n) => Number.isFinite(n));
+      .filter((n) => Number.isFinite(n) && Math.abs(n) > EPS);
     if (!arr.length) return null;
     return arr.reduce((s, n) => s + n, 0) / arr.length;
   }, [fair]);
+
+  /* Section-level "try again" flags */
+  const priceBad = ready && (!!headerError || isZeroOrBad(price)); // shown only inside Fair Value section
+  const execBad =
+    ready &&
+    !fin.loading &&
+    (!!fin.error || (!hasNonZeroSeries(serRevenue) && !hasNonZeroSeries(serOp) && !hasNonZeroSeries(serNet) && !hasNonZeroSeries(serFCF)));
+
+  const fairBad =
+    ready &&
+    !val.loading &&
+    (!!val.error || !hasMeaningfulFair(fair) || isZeroOrBad(fairAvg));
+
+  const revIncomeBad =
+    ready &&
+    !fin.loading &&
+    (!!fin.error || !hasNonZeroSeries(serRevenue) || !hasNonZeroSeries(serOp) || !hasNonZeroSeries(serNet));
+
+  const equityFcfBad =
+    ready &&
+    !fin.loading &&
+    (!!fin.error || !hasNonZeroSeries(serEquity) || !hasNonZeroSeries(serFCF));
+
+  const appendixBad =
+    ready &&
+    !fin.loading &&
+    (!!fin.error || !hasMeaningfulYears(years));
 
   return (
     <div style={{ background: "#f8fafc", minHeight: "100vh" }} dir={dir} lang={lang}>
@@ -362,9 +436,7 @@ export default function Stock() {
           <div style={{ marginInlineStart: "auto", display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ fontWeight: 800 }}>
               {t("PRICE")}:{" "}
-              {headerError ? (
-                <span style={{ color: "#fecaca" }}>{headerError}</span>
-              ) : !ready ? (
+              {!ready ? (
                 t("LOADING")
               ) : price == null ? (
                 t("LOADING")
@@ -380,6 +452,8 @@ export default function Stock() {
         <Card title={t("EXEC_SUM")}>
           {!ready ? (
             <div style={{ color: "#475569" }}>{waitText}</div>
+          ) : execBad ? (
+            <RetryBox text={t("RETRY_MSG")} />
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
               <ul style={{ margin: 0, paddingInlineStart: 18 }}>
@@ -402,33 +476,38 @@ export default function Stock() {
             <div style={{ color: "#475569" }}>{waitText}</div>
           ) : val.loading ? (
             <div style={{ color: "#475569" }}>{t("LOADING")}</div>
-          ) : val.error ? (
-            <div style={{ color: "#b91c1c" }}>{val.error}</div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
-              <div style={{ display: "grid", gap: 8 }}>
-                <div><b>{t("CUR_PRICE")}:</b> {fmt2(price)} {currency}</div>
-                <div><b>{t("FAIR_AVG")}:</b> {fmt2(fairAvg)} {currency}</div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {priceBad ? <RetryBox text={t("PRICE_RETRY_MSG")} /> : null}
+              {fairBad ? (
+                <RetryBox text={t("RETRY_MSG")} />
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <div><b>{t("CUR_PRICE")}:</b> {fmt2(price)} {currency}</div>
+                    <div><b>{t("FAIR_AVG")}:</b> {fmt2(fairAvg)} {currency}</div>
 
-                <div style={{ marginTop: 10, fontWeight: 900 }}>{t("VAL_METHODS")}</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, maxWidth: 420 }}>
-                  <div>{t("EV_SHARE")}</div>
-                  <div style={{ fontWeight: 800 }}>{fmt2(fair?.fairEV)} {currency}</div>
+                    <div style={{ marginTop: 10, fontWeight: 900 }}>{t("VAL_METHODS")}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, maxWidth: 420 }}>
+                      <div>{t("EV_SHARE")}</div>
+                      <div style={{ fontWeight: 800 }}>{fmt2(fair?.fairEV)} {currency}</div>
 
-                  <div>{t("PS_BASED")}</div>
-                  <div style={{ fontWeight: 800 }}>{fmt2(fair?.fairPS)} {currency}</div>
+                      <div>{t("PS_BASED")}</div>
+                      <div style={{ fontWeight: 800 }}>{fmt2(fair?.fairPS)} {currency}</div>
 
-                  <div>{t("PE_BASED")}</div>
-                  <div style={{ fontWeight: 800 }}>{fmt2(fair?.fairPE)} {currency}</div>
+                      <div>{t("PE_BASED")}</div>
+                      <div style={{ fontWeight: 800 }}>{fmt2(fair?.fairPE)} {currency}</div>
 
-                  <div>{t("EQUITY_PER_SHARE")}</div>
-                  <div style={{ fontWeight: 800 }}>{fmt2(fair?.equityPerShare)} {currency}</div>
+                      <div>{t("EQUITY_PER_SHARE")}</div>
+                      <div style={{ fontWeight: 800 }}>{fmt2(fair?.equityPerShare)} {currency}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <CompareBar current={price ?? 0} fair={fairAvg ?? 0} currency={currency} dir={dir} t={t} />
+                  </div>
                 </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <CompareBar current={price ?? 0} fair={fairAvg ?? 0} currency={currency} dir={dir} t={t} />
-              </div>
+              )}
             </div>
           )}
         </Card>
@@ -437,6 +516,8 @@ export default function Stock() {
         <Card title={t("REV_INC_TITLE")}>
           {!ready ? (
             <div style={{ color: "#475569" }}>{waitText}</div>
+          ) : revIncomeBad ? (
+            <RetryBox text={t("RETRY_MSG")} />
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
               <ChartBlock title={t("REVENUE")} series={serRevenue} dir={dir} t={t} />
@@ -450,6 +531,8 @@ export default function Stock() {
         <Card title={t("EQUITY_FCF_TITLE")}>
           {!ready ? (
             <div style={{ color: "#475569" }}>{waitText}</div>
+          ) : equityFcfBad ? (
+            <RetryBox text={t("RETRY_MSG")} />
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 12 }}>
               <ChartBlock title={t("TOTAL_EQUITY")} series={serEquity} w={480} dir={dir} t={t} />
@@ -464,10 +547,8 @@ export default function Stock() {
             <div style={{ color: "#475569" }}>{waitText}</div>
           ) : fin.loading ? (
             <div style={{ color: "#475569" }}>{t("LOADING")}</div>
-          ) : fin.error ? (
-            <div style={{ color: "#b91c1c" }}>{fin.error}</div>
-          ) : !years.length ? (
-            <div style={{ color: "#475569" }}>{t("NO_DATA")}</div>
+          ) : appendixBad ? (
+            <RetryBox text={t("RETRY_MSG")} />
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
