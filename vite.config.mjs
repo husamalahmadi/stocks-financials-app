@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: "docs",
+    base: "/stocks-financials-app/",
     emptyOutDir: true,
   },
 });
