@@ -1,20 +1,24 @@
-// FILE: client/src/data/stocksCatalog.js
+// FILE: src/data/stocksCatalog.js
+import { publicUrl } from "../utils/publicUrl.js";
+
 const DATA_FILES = {
-  us: "/data/sp500_grouped_by_industry.json",
-  sa: "/data/tasi_grouped_by_industry.json",
+  us: publicUrl("data/sp500_grouped_by_industry.json"),
+  sa: publicUrl("data/tasi_grouped_by_industry.json"),
 };
 
 export const CURRENCY_BY_MARKET = { us: "USD", sa: "SAR" };
 
 async function fetchJson(url) {
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
   const txt = await res.text();
+
   let json = {};
   try {
     json = txt ? JSON.parse(txt) : {};
   } catch {
     throw new Error(`Bad JSON ${res.status}: ${txt?.slice(0, 150)}`);
   }
+
   if (!res.ok) throw new Error(json?.message || json?.error || `HTTP ${res.status}`);
   return json;
 }
@@ -53,10 +57,7 @@ async function ensureCatalog() {
   if (_catalogPromise) return _catalogPromise;
 
   _catalogPromise = (async () => {
-    const [usRaw, saRaw] = await Promise.all([
-      fetchJson(DATA_FILES.us),
-      fetchJson(DATA_FILES.sa),
-    ]);
+    const [usRaw, saRaw] = await Promise.all([fetchJson(DATA_FILES.us), fetchJson(DATA_FILES.sa)]);
 
     const us = normalizeGrouped(usRaw, { tickerUppercase: true, market: "us" });
     const sa = normalizeGrouped(saRaw, { tickerUppercase: false, market: "sa" });
