@@ -1,7 +1,8 @@
-// FILE: client/src/routes/App.jsx
+// FILE: src/routes/App.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { I18nProvider } from "../i18n.jsx";
+
 import Home from "./Home.jsx";
 import Stock from "./Stock.jsx";
 import Contact from "./Contact.jsx";
@@ -10,7 +11,7 @@ import AboutUs from "./AboutUs.jsx";
 export default function App() {
   return (
     <I18nProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/stock/:ticker" element={<Stock />} />
