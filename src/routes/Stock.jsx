@@ -1,9 +1,11 @@
-// FILE: client/src/routes/Stock.jsx
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useI18n } from "../i18n.jsx";
 import { usePrefetchDelay } from "../hooks/usePrefetchDelay.js";
+import { useIsMobile } from "../hooks/useIsMobile.js";
 
+// These must already exist in your client-only version:
 import { getCompany } from "../data/stocksCatalog.js";
 import { getLivePrice } from "../services/priceService.js";
 import { getFinancialsCached } from "../services/financialsService.js";
@@ -48,36 +50,13 @@ function calcTrend(series, { neutralThresholdPct = 2 } = {}) {
 function trendText(series, t) {
   const { kind, pct } = calcTrend(series);
   if (kind === "no_data") return t("NO_DATA");
-  const word = kind === "up" ? t("UPTREND") : kind === "down" ? t("DOWNTREND") : t("NEUTRAL");
+  const word =
+    kind === "up"
+      ? t("UPTREND")
+      : kind === "down"
+        ? t("DOWNTREND")
+        : t("NEUTRAL");
   return `${word} · ${fmt2(Math.abs(pct))}%`;
-}
-
-/* Zero/bad-data detection */
-const EPS = 1e-9;
-function isZeroOrBad(v) {
-  const n = Number(v);
-  return !Number.isFinite(n) || Math.abs(n) <= EPS;
-}
-function hasNonZeroSeries(series) {
-  const s = Array.isArray(series) ? series : [];
-  return s.some((p) => !isZeroOrBad(p?.value));
-}
-function hasMeaningfulFair(fair) {
-  if (!fair) return false;
-  return (
-    !isZeroOrBad(fair.fairEV) ||
-    !isZeroOrBad(fair.fairPS) ||
-    !isZeroOrBad(fair.fairPE) ||
-    !isZeroOrBad(fair.equityPerShare)
-  );
-}
-function hasMeaningfulYears(years) {
-  const ys = Array.isArray(years) ? years : [];
-  if (!ys.length) return false;
-  return ys.some((y) => {
-    const vals = [y?.revenue, y?.operatingIncome, y?.netIncome, y?.totalEquity, y?.freeCashFlow];
-    return vals.some((v) => !isZeroOrBad(v));
-  });
 }
 
 /* UI atoms */
@@ -90,6 +69,7 @@ function Card({ title, children, style }) {
         background: "#fff",
         marginBottom: 16,
         boxShadow: "0 1px 10px rgba(0,0,0,0.04)",
+        overflow: "hidden",
         ...style,
       }}
     >
@@ -105,7 +85,7 @@ function Card({ title, children, style }) {
           {title}
         </header>
       ) : null}
-      <div style={{ padding: 14 }}>{children}</div>
+      <div style={{ padding: 14, minWidth: 0 }}>{children}</div>
     </section>
   );
 }
@@ -125,6 +105,7 @@ function LangToggle({ lang, onToggle, t }) {
         background: "#ffffff",
         color: "#111827",
         cursor: "pointer",
+        flex: "0 0 auto",
       }}
     >
       {active ? t("AR") : t("EN")}
@@ -140,7 +121,7 @@ function CompareBar({ current, fair, currency, dir = "ltr", t }) {
   const fairPct = (fv / max) * 100;
 
   return (
-    <div style={{ width: 260, display: "grid", gap: 6 }}>
+    <div style={{ width: "100%", maxWidth: 360, minWidth: 0, display: "grid", gap: 6 }}>
       <div
         style={{
           height: 10,
@@ -148,6 +129,7 @@ function CompareBar({ current, fair, currency, dir = "ltr", t }) {
           borderRadius: 999,
           overflow: "hidden",
           position: "relative",
+          width: "100%",
         }}
         dir={dir}
       >
@@ -164,10 +146,10 @@ function CompareBar({ current, fair, currency, dir = "ltr", t }) {
         />
       </div>
       <div style={{ display: "grid", gap: 2, fontSize: 12, color: "#374151" }}>
-        <span>
+        <span style={{ overflowWrap: "anywhere" }}>
           {t("CUR_PRICE")}: <b>{fmt2(cur)} {currency}</b>
         </span>
-        <span>
+        <span style={{ overflowWrap: "anywhere" }}>
           {t("FAIR_AVG")}: <b>{fmt2(fv)} {currency}</b>
         </span>
       </div>
@@ -200,7 +182,11 @@ function LineChart({ title, series, w = 380, dir = "ltr" }) {
   const dAttr = data.map((p, i) => `${i ? "L" : "M"} ${xs(i)} ${ys(p.value)}`).join(" ");
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", display: "block" }} direction={dir}>
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      style={{ width: "100%", display: "block", maxWidth: "100%" }}
+      direction={dir}
+    >
       <text x={w / 2} y={16} textAnchor="middle" style={{ fontSize: 14, fontWeight: 900 }}>
         {title}
       </text>
@@ -209,7 +195,12 @@ function LineChart({ title, series, w = 380, dir = "ltr" }) {
       {data.map((p, i) => (
         <g key={`${p.label}-${i}`}>
           <circle cx={xs(i)} cy={ys(p.value)} r="3.5" fill="#0f4a5a" />
-          <text x={xs(i)} y={h - pad.b + 16} textAnchor="middle" style={{ fontSize: 10, fill: "#6b7280" }}>
+          <text
+            x={xs(i)}
+            y={h - pad.b + 16}
+            textAnchor="middle"
+            style={{ fontSize: 10, fill: "#6b7280" }}
+          >
             {p.label}
           </text>
         </g>
@@ -220,29 +211,12 @@ function LineChart({ title, series, w = 380, dir = "ltr" }) {
 
 function ChartBlock({ title, series, w, dir, t }) {
   return (
-    <div style={{ display: "grid", gap: 8 }}>
+    <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
       <LineChart title={title} series={series} w={w} dir={dir} />
-      <div style={{ fontSize: 12, color: "#374151" }}>
+      <div style={{ fontSize: 12, color: "#374151", overflowWrap: "anywhere" }}>
         <span style={{ fontWeight: 900 }}>{t("TREND")}:</span>{" "}
         <span style={{ fontWeight: 800 }}>{trendText(series, t)}</span>
       </div>
-    </div>
-  );
-}
-
-function RetryBox({ text }) {
-  return (
-    <div
-      style={{
-        background: "#fff7ed",
-        border: "1px solid #fed7aa",
-        borderRadius: 12,
-        padding: 12,
-        color: "#9a3412",
-        fontWeight: 800,
-      }}
-    >
-      {text}
     </div>
   );
 }
@@ -251,6 +225,7 @@ function RetryBox({ text }) {
 export default function Stock() {
   const { ticker } = useParams();
   const { t, lang, dir, toggleLang } = useI18n();
+  const isMobile = useIsMobile(700);
 
   const delayMs = Number(import.meta.env.VITE_PREFETCH_DELAY_MS || 5000);
   const { ready, secondsLeft } = usePrefetchDelay(delayMs, ticker);
@@ -259,8 +234,6 @@ export default function Stock() {
   const [market, setMarket] = useState("us");
   const [currency, setCurrency] = useState("USD");
   const [price, setPrice] = useState(null);
-
-  // Keep headerError for logic, but do NOT show it in the header.
   const [headerError, setHeaderError] = useState("");
 
   const [fin, setFin] = useState({ loading: false, error: "", data: null });
@@ -304,7 +277,6 @@ export default function Stock() {
         setPrice(Number(pj?.price));
       } catch (e) {
         if (!alive) return;
-        setPrice(null);
         setHeaderError(String(e?.message || e));
       }
     })();
@@ -375,41 +347,17 @@ export default function Stock() {
   const fairAvg = useMemo(() => {
     const arr = [fair?.fairEV, fair?.fairPS, fair?.fairPE]
       .map((n) => Number(n))
-      .filter((n) => Number.isFinite(n) && Math.abs(n) > EPS);
+      .filter((n) => Number.isFinite(n));
     if (!arr.length) return null;
     return arr.reduce((s, n) => s + n, 0) / arr.length;
   }, [fair]);
 
-  /* Section-level "try again" flags */
-  const priceBad = ready && (!!headerError || isZeroOrBad(price)); // shown only inside Fair Value section
-  const execBad =
-    ready &&
-    !fin.loading &&
-    (!!fin.error || (!hasNonZeroSeries(serRevenue) && !hasNonZeroSeries(serOp) && !hasNonZeroSeries(serNet) && !hasNonZeroSeries(serFCF)));
-
-  const fairBad =
-    ready &&
-    !val.loading &&
-    (!!val.error || !hasMeaningfulFair(fair) || isZeroOrBad(fairAvg));
-
-  const revIncomeBad =
-    ready &&
-    !fin.loading &&
-    (!!fin.error || !hasNonZeroSeries(serRevenue) || !hasNonZeroSeries(serOp) || !hasNonZeroSeries(serNet));
-
-  const equityFcfBad =
-    ready &&
-    !fin.loading &&
-    (!!fin.error || !hasNonZeroSeries(serEquity) || !hasNonZeroSeries(serFCF));
-
-  const appendixBad =
-    ready &&
-    !fin.loading &&
-    (!!fin.error || !hasMeaningfulYears(years));
+  const chartW = isMobile ? 320 : 380;
+  const bigChartW = isMobile ? 320 : 480;
 
   return (
     <div style={{ background: "#f8fafc", minHeight: "100vh" }} dir={dir} lang={lang}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16, overflowX: "hidden" }}>
         {/* Banner */}
         <div
           style={{
@@ -420,23 +368,37 @@ export default function Stock() {
             marginBottom: 16,
             boxShadow: "0 1px 10px rgba(0,0,0,0.10)",
             display: "flex",
-            alignItems: "center",
+            alignItems: isMobile ? "stretch" : "center",
             gap: 12,
             flexWrap: "wrap",
+            minWidth: 0,
           }}
         >
-          <div style={{ display: "grid", gap: 2 }}>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>{t("REPORT")}</div>
-            <div style={{ fontSize: 13, color: "#cbd5e1" }}>
+          <div style={{ display: "grid", gap: 2, minWidth: 0, flex: "1 1 320px" }}>
+            <div style={{ fontSize: 18, fontWeight: 900, overflowWrap: "anywhere" }}>{t("REPORT")}</div>
+            <div style={{ fontSize: 13, color: "#cbd5e1", overflowWrap: "anywhere" }}>
               <b>{t("TICKER")}:</b> {ticker} — {company || "—"} · <b>{t("REPORT_DATE")}:</b> {reportDate}
             </div>
             {!ready ? <div style={{ fontSize: 12, color: "#e2e8f0" }}>{waitText}</div> : null}
           </div>
 
-          <div style={{ marginInlineStart: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ fontWeight: 800 }}>
+          <div
+            style={{
+              marginInlineStart: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              justifyContent: isMobile ? "space-between" : "flex-end",
+              width: isMobile ? "100%" : "auto",
+              minWidth: 0,
+            }}
+          >
+            <div style={{ fontWeight: 800, overflowWrap: "anywhere" }}>
               {t("PRICE")}:{" "}
-              {!ready ? (
+              {headerError ? (
+                <span style={{ color: "#fecaca" }}>{headerError}</span>
+              ) : !ready ? (
                 t("LOADING")
               ) : price == null ? (
                 t("LOADING")
@@ -452,18 +414,27 @@ export default function Stock() {
         <Card title={t("EXEC_SUM")}>
           {!ready ? (
             <div style={{ color: "#475569" }}>{waitText}</div>
-          ) : execBad ? (
-            <RetryBox text={t("RETRY_MSG")} />
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
-              <ul style={{ margin: 0, paddingInlineStart: 18 }}>
-                <li><b>{t("REV_GROWTH")}:</b> {trendText(serRevenue, t)}</li>
-                <li><b>{t("OP_INCOME")}:</b> {trendText(serOp, t)}</li>
-                <li><b>{t("NET_INCOME")}:</b> {trendText(serNet, t)}</li>
-                <li><b>{t("FCF")}:</b> {trendText(serFCF, t)}</li>
-                <li><b>{t("STOCK_VALUATION")}:</b> {t("FAIR_ABBR")} ≈ {fmt2(fairAvg)} {currency}</li>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr",
+                gap: 16,
+                alignItems: "start",
+                minWidth: 0,
+              }}
+            >
+              <ul style={{ margin: 0, paddingInlineStart: 18, minWidth: 0 }}>
+                <li style={{ overflowWrap: "anywhere" }}><b>{t("REV_GROWTH")}:</b> {trendText(serRevenue, t)}</li>
+                <li style={{ overflowWrap: "anywhere" }}><b>{t("OP_INCOME")}:</b> {trendText(serOp, t)}</li>
+                <li style={{ overflowWrap: "anywhere" }}><b>{t("NET_INCOME")}:</b> {trendText(serNet, t)}</li>
+                <li style={{ overflowWrap: "anywhere" }}><b>{t("FCF")}:</b> {trendText(serFCF, t)}</li>
+                <li style={{ overflowWrap: "anywhere" }}>
+                  <b>{t("STOCK_VALUATION")}:</b> {t("FAIR_ABBR")} ≈ {fmt2(fairAvg)} {currency}
+                </li>
               </ul>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+
+              <div style={{ display: "flex", justifyContent: isMobile ? "flex-start" : "flex-end", minWidth: 0 }}>
                 <CompareBar current={price ?? 0} fair={fairAvg ?? 0} currency={currency} dir={dir} t={t} />
               </div>
             </div>
@@ -476,38 +447,49 @@ export default function Stock() {
             <div style={{ color: "#475569" }}>{waitText}</div>
           ) : val.loading ? (
             <div style={{ color: "#475569" }}>{t("LOADING")}</div>
+          ) : val.error ? (
+            <div style={{ color: "#b91c1c" }}>{val.error}</div>
           ) : (
-            <div style={{ display: "grid", gap: 10 }}>
-              {priceBad ? <RetryBox text={t("PRICE_RETRY_MSG")} /> : null}
-              {fairBad ? (
-                <RetryBox text={t("RETRY_MSG")} />
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
-                  <div style={{ display: "grid", gap: 8 }}>
-                    <div><b>{t("CUR_PRICE")}:</b> {fmt2(price)} {currency}</div>
-                    <div><b>{t("FAIR_AVG")}:</b> {fmt2(fairAvg)} {currency}</div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr",
+                gap: 16,
+                alignItems: "start",
+                minWidth: 0,
+              }}
+            >
+              <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
+                <div style={{ overflowWrap: "anywhere" }}><b>{t("CUR_PRICE")}:</b> {fmt2(price)} {currency}</div>
+                <div style={{ overflowWrap: "anywhere" }}><b>{t("FAIR_AVG")}:</b> {fmt2(fairAvg)} {currency}</div>
 
-                    <div style={{ marginTop: 10, fontWeight: 900 }}>{t("VAL_METHODS")}</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 6, maxWidth: 420 }}>
-                      <div>{t("EV_SHARE")}</div>
-                      <div style={{ fontWeight: 800 }}>{fmt2(fair?.fairEV)} {currency}</div>
+                <div style={{ marginTop: 10, fontWeight: 900 }}>{t("VAL_METHODS")}</div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto",
+                    gap: 6,
+                    maxWidth: 520,
+                    minWidth: 0,
+                  }}
+                >
+                  <div style={{ overflowWrap: "anywhere" }}>{t("EV_SHARE")}</div>
+                  <div style={{ fontWeight: 800, textAlign: "end" }}>{fmt2(fair?.fairEV)} {currency}</div>
 
-                      <div>{t("PS_BASED")}</div>
-                      <div style={{ fontWeight: 800 }}>{fmt2(fair?.fairPS)} {currency}</div>
+                  <div style={{ overflowWrap: "anywhere" }}>{t("PS_BASED")}</div>
+                  <div style={{ fontWeight: 800, textAlign: "end" }}>{fmt2(fair?.fairPS)} {currency}</div>
 
-                      <div>{t("PE_BASED")}</div>
-                      <div style={{ fontWeight: 800 }}>{fmt2(fair?.fairPE)} {currency}</div>
+                  <div style={{ overflowWrap: "anywhere" }}>{t("PE_BASED")}</div>
+                  <div style={{ fontWeight: 800, textAlign: "end" }}>{fmt2(fair?.fairPE)} {currency}</div>
 
-                      <div>{t("EQUITY_PER_SHARE")}</div>
-                      <div style={{ fontWeight: 800 }}>{fmt2(fair?.equityPerShare)} {currency}</div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <CompareBar current={price ?? 0} fair={fairAvg ?? 0} currency={currency} dir={dir} t={t} />
-                  </div>
+                  <div style={{ overflowWrap: "anywhere" }}>{t("EQUITY_PER_SHARE")}</div>
+                  <div style={{ fontWeight: 800, textAlign: "end" }}>{fmt2(fair?.equityPerShare)} {currency}</div>
                 </div>
-              )}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: isMobile ? "flex-start" : "flex-end", minWidth: 0 }}>
+                <CompareBar current={price ?? 0} fair={fairAvg ?? 0} currency={currency} dir={dir} t={t} />
+              </div>
             </div>
           )}
         </Card>
@@ -516,13 +498,18 @@ export default function Stock() {
         <Card title={t("REV_INC_TITLE")}>
           {!ready ? (
             <div style={{ color: "#475569" }}>{waitText}</div>
-          ) : revIncomeBad ? (
-            <RetryBox text={t("RETRY_MSG")} />
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-              <ChartBlock title={t("REVENUE")} series={serRevenue} dir={dir} t={t} />
-              <ChartBlock title={t("OP_INCOME")} series={serOp} dir={dir} t={t} />
-              <ChartBlock title={t("NET_INCOME")} series={serNet} dir={dir} t={t} />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: 12,
+                minWidth: 0,
+              }}
+            >
+              <ChartBlock title={t("REVENUE")} series={serRevenue} w={chartW} dir={dir} t={t} />
+              <ChartBlock title={t("OP_INCOME")} series={serOp} w={chartW} dir={dir} t={t} />
+              <ChartBlock title={t("NET_INCOME")} series={serNet} w={chartW} dir={dir} t={t} />
             </div>
           )}
         </Card>
@@ -531,12 +518,17 @@ export default function Stock() {
         <Card title={t("EQUITY_FCF_TITLE")}>
           {!ready ? (
             <div style={{ color: "#475569" }}>{waitText}</div>
-          ) : equityFcfBad ? (
-            <RetryBox text={t("RETRY_MSG")} />
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 12 }}>
-              <ChartBlock title={t("TOTAL_EQUITY")} series={serEquity} w={480} dir={dir} t={t} />
-              <ChartBlock title={t("FCF")} series={serFCF} w={480} dir={dir} t={t} />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(360px, 1fr))",
+                gap: 12,
+                minWidth: 0,
+              }}
+            >
+              <ChartBlock title={t("TOTAL_EQUITY")} series={serEquity} w={bigChartW} dir={dir} t={t} />
+              <ChartBlock title={t("FCF")} series={serFCF} w={bigChartW} dir={dir} t={t} />
             </div>
           )}
         </Card>
@@ -547,8 +539,10 @@ export default function Stock() {
             <div style={{ color: "#475569" }}>{waitText}</div>
           ) : fin.loading ? (
             <div style={{ color: "#475569" }}>{t("LOADING")}</div>
-          ) : appendixBad ? (
-            <RetryBox text={t("RETRY_MSG")} />
+          ) : fin.error ? (
+            <div style={{ color: "#b91c1c" }}>{fin.error}</div>
+          ) : !years.length ? (
+            <div style={{ color: "#475569" }}>{t("NO_DATA")}</div>
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
@@ -565,12 +559,12 @@ export default function Stock() {
                 <tbody>
                   {years.map((y) => (
                     <tr key={y.year}>
-                      <td style={{ padding: 8, borderBottom: "1px solid #f1f5f9" }}>{y.year}</td>
-                      <td style={{ textAlign: "end", padding: 8, borderBottom: "1px solid #f1f5f9" }}>{fmtBill(y.revenue)}</td>
-                      <td style={{ textAlign: "end", padding: 8, borderBottom: "1px solid #f1f5f9" }}>{fmtBill(y.operatingIncome)}</td>
-                      <td style={{ textAlign: "end", padding: 8, borderBottom: "1px solid #f1f5f9" }}>{fmtBill(y.netIncome)}</td>
-                      <td style={{ textAlign: "end", padding: 8, borderBottom: "1px solid #f1f5f9" }}>{fmtBill(y.totalEquity)}</td>
-                      <td style={{ textAlign: "end", padding: 8, borderBottom: "1px solid #f1f5f9" }}>{fmtBill(y.freeCashFlow)}</td>
+                      <td style={{ padding: 8, borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" }}>{y.year}</td>
+                      <td style={{ textAlign: "end", padding: 8, borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" }}>{fmtBill(y.revenue)}</td>
+                      <td style={{ textAlign: "end", padding: 8, borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" }}>{fmtBill(y.operatingIncome)}</td>
+                      <td style={{ textAlign: "end", padding: 8, borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" }}>{fmtBill(y.netIncome)}</td>
+                      <td style={{ textAlign: "end", padding: 8, borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" }}>{fmtBill(y.totalEquity)}</td>
+                      <td style={{ textAlign: "end", padding: 8, borderBottom: "1px solid #f1f5f9", whiteSpace: "nowrap" }}>{fmtBill(y.freeCashFlow)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -1,5 +1,4 @@
-
-// FILE: client/src/routes/Home.jsx
+// FILE: src/routes/Home.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n.jsx";
@@ -16,18 +15,8 @@ function LangToggle({ lang, onToggle, t }) {
       onClick={onToggle}
       aria-pressed={active}
       title="Toggle language"
-      style={{
-        border: "1px solid #d1d5db",
-        borderRadius: 999,
-        padding: "6px 10px",
-        fontWeight: 700,
-        background: "#ffffff",
-        color: "#111827",
-        cursor: "pointer",
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-      }}
+      className="tp-pill tp-pill--lang"
+      type="button"
     >
       {lang === "en" ? t("EN") : t("AR")}
     </button>
@@ -123,61 +112,163 @@ export default function Home() {
 
   return (
     <div dir={dir} lang={lang} style={{ minHeight: "100vh", background: "#f8fafc" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
-        {/* Header (dark like Stock) */}
-        <div
-          style={{
-            borderRadius: 18,
-            background: "linear-gradient(180deg, #0f172a, #111827)",
-            padding: "14px 16px",
-            color: "#fff",
-            boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>Trueprice.cash</div>
-            <div style={{ fontSize: 13, color: "#cbd5e1", marginTop: 2 }}>
-              {market === "us" ? t("MARKET_US") : t("MARKET_SA")}
-            </div>
+      {/* Responsive fixes */}
+      <style>{`
+        /* Global guardrails to prevent overflow on mobile */
+        .tp-wrap, .tp-card, .tp-header, .tp-filters, .tp-companies { box-sizing: border-box; }
+        .tp-wrap * { box-sizing: border-box; }
+        .tp-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+        .tp-card { background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px; box-shadow:0 1px 10px rgba(0,0,0,0.04); }
+        .tp-title { font-weight:900; margin-bottom:10px; }
+        .tp-muted { color:#64748b; }
+        .tp-danger { color:#b91c1c; }
+
+        /* Header */
+        .tp-header {
+          border-radius: 18px;
+          background: linear-gradient(180deg, #0f172a, #111827);
+          padding: 14px 16px;
+          color: #fff;
+          box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex-wrap: wrap; /* critical */
+          min-width: 0;
+        }
+        .tp-brand { min-width: 0; }
+        .tp-brand h1 { margin:0; font-size:18px; font-weight:900; }
+        .tp-brand p { margin:2px 0 0; font-size:13px; color:#cbd5e1; }
+
+        .tp-actions {
+          margin-inline-start: auto;
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap; /* critical */
+          justify-content: flex-end;
+          min-width: 0;
+        }
+
+        /* Pills (About/Contact/Lang) */
+        .tp-pill {
+          border: 1px solid #d1d5db;
+          border-radius: 999px;
+          padding: 6px 10px;
+          font-weight: 700;
+          background: #fff;
+          color: #111827;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          white-space: nowrap;
+          max-width: 100%;
+        }
+        .tp-pill--lang { gap: 8px; }
+
+        /* Filters layout */
+        .tp-filters { margin-top: 16px; }
+        .tp-filters-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1.3fr;
+          gap: 12px;
+          align-items: end;
+          min-width: 0;
+        }
+        .tp-label { font-size: 12px; font-weight: 800; color: #334155; margin-bottom: 6px; }
+
+        .tp-market-row { display:flex; gap:10px; min-width:0; flex-wrap:wrap; }
+        .tp-market-btn {
+          flex: 1;
+          min-width: 140px; /* allows wrap instead of overflow */
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 10px 12px;
+          font-weight: 800;
+          cursor: pointer;
+          max-width: 100%;
+        }
+        .tp-market-btn--active { background:#0f172a; color:#fff; }
+        .tp-market-btn--idle { background:#fff; color:#0f172a; }
+
+        .tp-select, .tp-input {
+          width: 100%;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 10px 12px;
+          background: #fff;
+          font-weight: 700;
+          max-width: 100%;
+          min-width: 0; /* critical */
+        }
+        .tp-input { font-weight: 600; }
+
+        .tp-search-row { display:flex; gap:10px; min-width:0; flex-wrap:wrap; }
+        .tp-reset-btn {
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 10px 14px;
+          background: #f8fafc;
+          font-weight: 800;
+          cursor: pointer;
+          min-width: 96px;
+          max-width: 100%;
+        }
+
+        /* Companies grid */
+        .tp-companies { margin-top: 16px; }
+        .tp-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          gap: 12px;
+          min-width: 0;
+        }
+        .tp-company {
+          text-align: start;
+          border: 1px solid #e5e7eb;
+          border-radius: 14px;
+          padding: 12px;
+          background: #fff;
+          cursor: pointer;
+          max-width: 100%;
+          min-width: 0;
+        }
+        .tp-company-name { font-weight: 900; color:#0f172a; }
+        .tp-company-meta { font-size:12px; color:#64748b; margin-top:6px; line-height: 1.35; }
+        .tp-strong { font-weight:900; color:#111827; }
+
+        /* Mobile rules (fix overflow) */
+        @media (max-width: 820px) {
+          .tp-filters-grid { grid-template-columns: 1fr; }
+          .tp-search-row { flex-direction: column; }
+          .tp-reset-btn { width: 100%; min-width: 0; }
+          .tp-market-btn { min-width: 0; }
+        }
+        @media (max-width: 520px) {
+          .tp-wrap { padding: 12px; }
+          .tp-header { align-items: stretch; }
+          .tp-actions { width: 100%; justify-content: space-between; }
+          .tp-pill { flex: 1; }
+          .tp-grid { grid-template-columns: 1fr; }
+        }
+      `}</style>
+
+      <div className="tp-wrap">
+        {/* Header */}
+        <div className="tp-header">
+          <div className="tp-brand">
+            <h1>Trueprice.cash</h1>
+            <p>{market === "us" ? t("MARKET_US") : t("MARKET_SA")}</p>
           </div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center", marginInlineStart: "auto" }}>
-            <Link
-              to="/about"
-              aria-label={t("ABOUT_US")}
-              style={{
-                border: "1px solid #d1d5db",
-                borderRadius: 999,
-                padding: "6px 10px",
-                fontWeight: 700,
-                background: "#fff",
-                color: "#111827",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-              }}
-            >
+          <div className="tp-actions">
+            <Link to="/about" aria-label={t("ABOUT_US")} className="tp-pill">
               {t("ABOUT_US")}
             </Link>
 
-            <Link
-              to="/contact"
-              aria-label={t("CONTACT_US")}
-              style={{
-                border: "1px solid #d1d5db",
-                borderRadius: 999,
-                padding: "6px 10px",
-                fontWeight: 700,
-                background: "#fff",
-                color: "#111827",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-              }}
-            >
+            <Link to="/contact" aria-label={t("CONTACT_US")} className="tp-pill">
               {t("CONTACT_US")}
             </Link>
 
@@ -186,59 +277,25 @@ export default function Home() {
         </div>
 
         {/* Filters */}
-        <div
-          style={{
-            marginTop: 16,
-            background: "#fff",
-            border: "1px solid #e5e7eb",
-            borderRadius: 16,
-            padding: 14,
-            boxShadow: "0 1px 10px rgba(0,0,0,0.04)",
-          }}
-        >
-          <div style={{ fontWeight: 900, marginBottom: 10 }}>{t("FILTERS")}</div>
+        <div className="tp-card tp-filters">
+          <div className="tp-title">{t("FILTERS")}</div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1.3fr",
-              gap: 12,
-              alignItems: "end",
-            }}
-          >
+          <div className="tp-filters-grid">
             {/* Market */}
             <div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#334155", marginBottom: 6 }}>
-                {t("MARKET")}
-              </div>
-              <div style={{ display: "flex", gap: 10 }}>
+              <div className="tp-label">{t("MARKET")}</div>
+              <div className="tp-market-row">
                 <button
+                  type="button"
                   onClick={() => setMarket("us")}
-                  style={{
-                    flex: 1,
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 12,
-                    padding: "10px 12px",
-                    background: market === "us" ? "#0f172a" : "#fff",
-                    color: market === "us" ? "#fff" : "#0f172a",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                  }}
+                  className={`tp-market-btn ${market === "us" ? "tp-market-btn--active" : "tp-market-btn--idle"}`}
                 >
                   {t("MARKET_US")}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setMarket("sa")}
-                  style={{
-                    flex: 1,
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 12,
-                    padding: "10px 12px",
-                    background: market === "sa" ? "#0f172a" : "#fff",
-                    color: market === "sa" ? "#fff" : "#0f172a",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                  }}
+                  className={`tp-market-btn ${market === "sa" ? "tp-market-btn--active" : "tp-market-btn--idle"}`}
                 >
                   {t("MARKET_SA")}
                 </button>
@@ -247,20 +304,11 @@ export default function Home() {
 
             {/* Industry */}
             <div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#334155", marginBottom: 6 }}>
-                {t("INDUSTRY")}
-              </div>
+              <div className="tp-label">{t("INDUSTRY")}</div>
               <select
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
-                style={{
-                  width: "100%",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  background: "#fff",
-                  fontWeight: 700,
-                }}
+                className="tp-select"
               >
                 <option value="all">{t("INDUSTRY_ALL")}</option>
                 {industryOptions.map((opt) => (
@@ -273,35 +321,15 @@ export default function Home() {
 
             {/* Search */}
             <div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#334155", marginBottom: 6 }}>
-                {t("SEARCH")}
-              </div>
-              <div style={{ display: "flex", gap: 10 }}>
+              <div className="tp-label">{t("SEARCH")}</div>
+              <div className="tp-search-row">
                 <input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder={t("SEARCH_PLACEHOLDER")}
-                  style={{
-                    flex: 1,
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 12,
-                    padding: "10px 12px",
-                    background: "#fff",
-                    fontWeight: 600,
-                  }}
+                  className="tp-input"
                 />
-                <button
-                  onClick={resetFilters}
-                  style={{
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 12,
-                    padding: "10px 14px",
-                    background: "#f8fafc",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    minWidth: 96,
-                  }}
-                >
+                <button type="button" onClick={resetFilters} className="tp-reset-btn">
                   {t("RESET")}
                 </button>
               </div>
@@ -310,48 +338,33 @@ export default function Home() {
         </div>
 
         {/* Companies */}
-        <div
-          style={{
-            marginTop: 16,
-            background: "#fff",
-            border: "1px solid #e5e7eb",
-            borderRadius: 16,
-            padding: 14,
-            boxShadow: "0 1px 10px rgba(0,0,0,0.04)",
-          }}
-        >
-          <div style={{ fontWeight: 900, marginBottom: 10 }}>
+        <div className="tp-card tp-companies">
+          <div className="tp-title">
             {t("COMPANIES")} ({filtered.length})
           </div>
 
           {state.loading ? (
-            <div style={{ color: "#64748b" }}>{t("LOADING")}</div>
+            <div className="tp-muted">{t("LOADING")}</div>
           ) : state.error ? (
-            <div style={{ color: "#b91c1c" }}>{state.error}</div>
+            <div className="tp-danger">{state.error}</div>
           ) : filtered.length === 0 ? (
-            <div style={{ color: "#64748b" }}>{t("NO_MATCH")}</div>
+            <div className="tp-muted">{t("NO_MATCH")}</div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
+            <div className="tp-grid">
               {filtered.map((it) => (
                 <button
                   key={`${it.ticker}-${it.market || market}`}
                   onClick={() => goToStock(it.ticker)}
-                  style={{
-                    textAlign: "start",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 14,
-                    padding: 12,
-                    background: "#fff",
-                    cursor: "pointer",
-                  }}
+                  className="tp-company"
+                  type="button"
                 >
-                  <div style={{ fontWeight: 900, color: "#0f172a" }}>{it.name}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
-                    <span style={{ fontWeight: 900, color: "#111827" }}>{t("TICKER")}:</span> {it.ticker}
+                  <div className="tp-company-name">{it.name}</div>
+                  <div className="tp-company-meta">
+                    <span className="tp-strong">{t("TICKER")}:</span> {it.ticker}
                     {it.industry ? (
                       <>
                         {" "}
-                        · <span style={{ fontWeight: 900, color: "#111827" }}>{t("INDUSTRY")}:</span> {it.industry}
+                        · <span className="tp-strong">{t("INDUSTRY")}:</span> {it.industry}
                       </>
                     ) : null}
                   </div>
