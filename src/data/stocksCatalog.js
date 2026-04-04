@@ -119,15 +119,21 @@ export async function getCompany(rawTicker) {
 export async function resolveMarketAndSymbol(rawTicker, requestedMarket) {
   const cat = await ensureCatalog();
 
-  const tickerUS = String(rawTicker || "").toUpperCase();
-  const tickerSA = String(rawTicker || "");
+  const tickerUS = String(rawTicker || "").trim().toUpperCase();
+  const tickerSA = String(rawTicker || "").trim();
 
-  let market =
-    requestedMarket === "sa" ? "sa" : requestedMarket === "us" ? "us" : null;
+  const inUS = cat.us.upperSet.has(tickerUS);
+  const inSA = cat.sa.upperSet.has(tickerSA.toUpperCase());
+
+  // Do not trust requestedMarket alone: Stock page defaults to "us" before catalog resolves,
+  // which would mis-classify TASI tickers as US and break symbol (missing :TADAWUL) and local JSON lookup.
+  let market = null;
+  if (requestedMarket === "us" && inUS) market = "us";
+  else if (requestedMarket === "sa" && inSA) market = "sa";
 
   if (!market) {
-    if (cat.us.upperSet.has(tickerUS)) market = "us";
-    else if (cat.sa.upperSet.has(tickerSA.toUpperCase())) market = "sa";
+    if (inUS) market = "us";
+    else if (inSA) market = "sa";
   }
   if (!market) return { ok: false };
 

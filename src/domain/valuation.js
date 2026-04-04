@@ -1,6 +1,15 @@
 // FILE: client/src/domain/valuation.js
 import { resolveMarketAndSymbol, CURRENCY_BY_MARKET } from "../data/stocksCatalog.js";
 import { coalesce, toNumber } from "./financials.js";
+
+/** Prefer latest fiscal period (Twelve annual rows are usually newest-first, but not guaranteed). */
+function latestStatementRow(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return {};
+  const sorted = [...rows].sort((a, b) =>
+    String(b?.fiscal_date || "").localeCompare(String(a?.fiscal_date || ""))
+  );
+  return sorted[0] || {};
+}
 import {
   twelvePrice,
   twelveStatistics,
@@ -9,7 +18,6 @@ import {
 } from "../services/twelveData.js";
 import { getTasiCompanyData, tasiToValuationFormat } from "../services/tasiDataService.js";
 import { getSp500CompanyData, sp500ToValuationFormat } from "../services/sp500DataService.js";
-import { localJsonDataHasValuationInputs } from "../services/localFinancialJsonAdapters.js";
 
 /**
  * Client-side replacement for GET /api/valuation/:ticker.
@@ -32,9 +40,7 @@ export async function computeValuation({ ticker, market } = {}) {
       const tasiData = await getTasiCompanyData(tickerSA);
       if (tasiData) {
         const v = tasiToValuationFormat(tasiData);
-        const d = tasiData.data;
-        const hasUsableData = v && localJsonDataHasValuationInputs(d);
-        if (v && hasUsableData) {
+        if (v) {
           statsJson = { statistics: v.stats };
           bsJson = { balance_sheet: v.balance_sheet };
           isJson = { income_statement: v.income_statement };
@@ -48,9 +54,7 @@ export async function computeValuation({ ticker, market } = {}) {
       const sp500Data = await getSp500CompanyData(tickerUS);
       if (sp500Data) {
         const v = sp500ToValuationFormat(sp500Data);
-        const d = sp500Data.data;
-        const hasUsableData = v && localJsonDataHasValuationInputs(d);
-        if (v && hasUsableData) {
+        if (v) {
           statsJson = { statistics: v.stats };
           bsJson = { balance_sheet: v.balance_sheet };
           isJson = { income_statement: v.income_statement };
@@ -76,19 +80,19 @@ export async function computeValuation({ ticker, market } = {}) {
 
   const bs0 =
     Array.isArray(bsJson?.balance_sheet)
-      ? bsJson.balance_sheet[0]
+      ? latestStatementRow(bsJson.balance_sheet)
       : Array.isArray(bsJson?.balance_sheet?.annual)
-        ? bsJson.balance_sheet.annual.at(-1)
+        ? latestStatementRow(bsJson.balance_sheet.annual)
         : bsJson?.balance_sheet || {};
 
   const is0 =
     Array.isArray(isJson?.income_statement)
-      ? isJson.income_statement[0]
+      ? latestStatementRow(isJson.income_statement)
       : Array.isArray(isJson?.income_statement?.annual)
-        ? isJson.income_statement.annual.at(-1)
+        ? latestStatementRow(isJson.income_statement.annual)
         : isJson?.income_statement || {};
 
-  const sharesOutstanding = Math.max(
+  let sharesOutstanding = Math.max(
     0,
     coalesce(
       stats?.stock_statistics?.shares_outstanding,
@@ -96,6 +100,19 @@ export async function computeValuation({ ticker, market } = {}) {
       stats?.shares_outstanding
     )
   );
+
+  if (sharesOutstanding <= 0 && Array.isArray(isJson?.income_statement)) {
+    const rows = [...isJson.income_statement].sort((a, b) =>
+      String(b?.fiscal_date || "").localeCompare(String(a?.fiscal_date || ""))
+    );
+    for (const row of rows) {
+      const sh = coalesce(row?.basic_shares_outstanding, row?.diluted_shares_outstanding);
+      if (sh > 0) {
+        sharesOutstanding = sh;
+        break;
+      }
+    }
+  }
 
   const evFromStats = coalesce(
     stats?.valuations_metrics?.enterprise_value,
