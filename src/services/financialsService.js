@@ -3,7 +3,7 @@ import { getCached, setCached, delCached } from "../cache/browserCache.js";
 import { resolveMarketAndSymbol } from "../data/stocksCatalog.js";
 import { mergeFinancials } from "../domain/financials.js";
 import { twelveIncomeStatement, twelveBalanceSheet, twelveCashFlow } from "./twelveData.js";
-import { getTasiCompanyData, tasiToFinancialsFormat } from "./tasiDataService.js";
+import { getTasiCompanyData, isTasiBundleReady, tasiToFinancialsFormat } from "./tasiDataService.js";
 import { getSp500CompanyData, sp500ToFinancialsFormat } from "./sp500DataService.js";
 
 const DAYS_30_MS = 30 * 24 * 60 * 60 * 1000;
@@ -29,8 +29,14 @@ export async function getFinancialsCached({
   const cached = getCached(cacheKey, { ttlMs, storage });
   if (cached) {
     const hasYears = Array.isArray(cached?.years) && cached.years.length > 0;
-    if (hasYears) return { source: "cache", ...cached };
-    delCached(cacheKey, { storage });
+    if (!hasYears) {
+      delCached(cacheKey, { storage });
+    } else if (r.market === "sa" && !(await isTasiBundleReady())) {
+      // Cached charts but live bundle failed (404 / bad JSON): drop cache so financials and valuation stay in sync.
+      delCached(cacheKey, { storage });
+    } else {
+      return { source: "cache", ...cached };
+    }
   }
 
   const warnings = [];
