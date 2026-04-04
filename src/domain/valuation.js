@@ -7,7 +7,7 @@ import {
   twelveBalanceSheet,
   twelveIncomeStatement,
 } from "../services/twelveData.js";
-import { getTasiCompanyData } from "../services/tasiDataService.js";
+import { getTasiCompanyData, tasiToValuationFormat } from "../services/tasiDataService.js";
 import { getSp500CompanyData, sp500ToValuationFormat } from "../services/sp500DataService.js";
 
 /** Prefer latest fiscal period (Twelve annual rows are usually newest-first, but not guaranteed). */
@@ -33,8 +33,8 @@ function normalizeValuationStats(raw) {
 
 /**
  * Client-side replacement for GET /api/valuation/:ticker.
- * - TASI (SA): reads tasi_financial_data.json via getTasiCompanyData (statistics + statements from company.data).
- * - US (S&P 500): local sp500 bundle + optional Twelve fallback; twelvePrice for live quote.
+ * - TASI (SA): same pipeline as US — getTasiCompanyData from tasi_financial_data.json → tasiToValuationFormat (localJsonToValuationFormat).
+ * - US (S&P 500): getSp500CompanyData from sp500_financial_data.json → sp500ToValuationFormat; optional Twelve fallback; twelvePrice for quote.
  */
 export async function computeValuation({ ticker, market } = {}) {
   const r = await resolveMarketAndSymbol(ticker, market);
@@ -49,15 +49,12 @@ export async function computeValuation({ ticker, market } = {}) {
   if (resolvedMarket === "sa") {
     try {
       const tasiData = await getTasiCompanyData(tickerSA);
-      const d = tasiData?.data;
-      if (d) {
-        const innerStats = d.statistics?.statistics;
-        if (innerStats) statsJson = { statistics: innerStats };
-        if (Array.isArray(d.balance_sheet?.balance_sheet)) {
-          bsJson = { balance_sheet: d.balance_sheet.balance_sheet };
-        }
-        if (Array.isArray(d.income_statement?.income_statement)) {
-          isJson = { income_statement: d.income_statement.income_statement };
+      if (tasiData) {
+        const v = tasiToValuationFormat(tasiData);
+        if (v) {
+          statsJson = { statistics: v.stats };
+          bsJson = { balance_sheet: v.balance_sheet };
+          isJson = { income_statement: v.income_statement };
         }
       }
     } catch {
