@@ -9,11 +9,12 @@ import {
 } from "../services/twelveData.js";
 import { getTasiCompanyData, tasiToValuationFormat } from "../services/tasiDataService.js";
 import { getSp500CompanyData, sp500ToValuationFormat } from "../services/sp500DataService.js";
+import { localJsonDataHasValuationInputs } from "../services/localFinancialJsonAdapters.js";
 
 /**
  * Client-side replacement for GET /api/valuation/:ticker.
- * - TASI (SA): uses local tasi_all_financial_data.json for financials; twelvePrice for live price.
- * - US (S&P 500): uses local sp500_all_financial_data.json for financials; twelvePrice for live price.
+ * - TASI (SA): uses local tasi_financial_data.json for financials; twelvePrice for live price.
+ * - US (S&P 500): uses local sp500_financial_data.json for financials; twelvePrice for live price.
  * - Falls back to Twelve Data API when local data is empty/incomplete.
  * Caller can still cache the result in sessionStorage (as the UI already does).
  */
@@ -32,13 +33,7 @@ export async function computeValuation({ ticker, market } = {}) {
     if (tasiData) {
       const v = tasiToValuationFormat(tasiData);
       const d = tasiData.data;
-      const hasUsableData =
-        v &&
-        d?.outstanding_common_stocks != null &&
-        d?.outstanding_common_stocks > 0 &&
-        (d?.enterprise_value != null ||
-          d?.market_capitalization != null ||
-          (d?.equity?.length > 0 && (d?.sales?.length > 0 || d?.net_income?.length > 0)));
+      const hasUsableData = v && localJsonDataHasValuationInputs(d);
       if (v && hasUsableData) {
         statsJson = { statistics: v.stats };
         bsJson = { balance_sheet: v.balance_sheet };
@@ -50,13 +45,7 @@ export async function computeValuation({ ticker, market } = {}) {
     if (sp500Data) {
       const v = sp500ToValuationFormat(sp500Data);
       const d = sp500Data.data;
-      const hasUsableData =
-        v &&
-        d?.outstanding_common_stocks != null &&
-        d?.outstanding_common_stocks > 0 &&
-        (d?.enterprise_value != null ||
-          d?.market_capitalization != null ||
-          (d?.equity?.length > 0 && (d?.sales?.length > 0 || d?.net_income?.length > 0)));
+      const hasUsableData = v && localJsonDataHasValuationInputs(d);
       if (v && hasUsableData) {
         statsJson = { statistics: v.stats };
         bsJson = { balance_sheet: v.balance_sheet };

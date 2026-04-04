@@ -1,5 +1,6 @@
 /**
- * Check and fix missing financial data in both sp500 and TASI JSON files.
+ * Check and fix missing financial data in flat aggregate JSON files (not the Twelve-style
+ * sp500_financial_data.json / tasi_financial_data.json used by the app).
  * - Removes null/undefined values from time-series arrays
  * - Removes zero values (treated as missing/placeholder)
  * - Reports empty arrays and missing fields

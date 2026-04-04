@@ -1,5 +1,7 @@
 """
-Fill missing financial data in sp500_all_financial_data.json and tasi_all_financial_data.json.
+Fill missing financial data in sp500_all_financial_data.json and tasi_all_financial_data.json
+(flat companies[] bundles). The web client uses sp500_financial_data.json / tasi_financial_data.json
+instead (different schema).
 
 Identifies companies with empty time-series arrays or null scalars, re-fetches from Twelve Data API,
 merges new data into existing, removes nulls, and saves.

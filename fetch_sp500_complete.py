@@ -2,7 +2,10 @@
 Fetch S&P 500 financial data from Twelve Data API.
 
 Reads 603 stocks from sp500_grouped_by_industry.json, fetches data for each,
-and saves/overwrites sp500_all_financial_data.json.
+and saves/overwrites sp500_all_financial_data.json (flat companies[] time-series).
+
+The web client loads public/data/sp500_financial_data.json (Twelve-style industries +
+statement trees); regenerate that file separately if the app should use this fetch output.
 
 - Only keeps entries where value exists (removes null/empty)
 - Retries fetch once if data returns null; if still null after retry, removes that entry

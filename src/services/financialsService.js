@@ -10,8 +10,8 @@ const DAYS_30_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Client-side replacement for GET /api/financials/:ticker.
- * - TASI (SA): uses local tasi_all_financial_data.json (no API).
- * - US (S&P 500): uses local sp500_all_financial_data.json (no API).
+ * - TASI (SA): uses local tasi_financial_data.json (no API).
+ * - US (S&P 500): uses local sp500_financial_data.json (no API).
  * - Falls back to Twelve Data API when local data is empty.
  * - Only caches when years.length > 0 (same as server behavior).
  */
