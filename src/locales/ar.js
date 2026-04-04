@@ -99,7 +99,7 @@ export default {
   PRINT_REPORT: "طباعة التقرير",
   EXPORT_PDF: "تصدير PDF",
   NEWS_SIDEBAR_TITLE: "الأخبار",
-  NEWS_NO_ARTICLES: "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+  NEWS_NO_ARTICLES: "لا توجد مقالات حديثة. استخدم «تحديث» للمحاولة مرة أخرى.",
   NEWS_FETCH_ERROR: "تعذر تحميل الأخبار.",
   NEWS_REFRESH: "تحديث",
 };

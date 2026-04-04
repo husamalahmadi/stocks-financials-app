@@ -99,7 +99,7 @@ export default {
   PRINT_REPORT: "Print report",
   EXPORT_PDF: "Export PDF",
   NEWS_SIDEBAR_TITLE: "News",
-  NEWS_NO_ARTICLES: "Something went wrong. Please try again.",
+  NEWS_NO_ARTICLES: "No recent articles found. Use Refresh to try again.",
   NEWS_FETCH_ERROR: "Could not load news.",
   NEWS_REFRESH: "Refresh",
 };
