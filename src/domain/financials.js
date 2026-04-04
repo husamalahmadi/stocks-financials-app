@@ -111,11 +111,24 @@ export function mergeFinancials({ income, balance, cash, ticker, warnings }) {
     if (!yr) continue;
     const y = ensure(yr);
     y.revenue = coalesce(row?.total_revenue, row?.revenue, row?.net_sales, row?.sales, row?.total_sales);
+    const sga = coalesce(row?.operating_expense?.selling_general_and_administrative);
+    const rd = coalesce(row?.operating_expense?.research_and_development);
+    const otherOpEx = coalesce(row?.operating_expense?.other_operating_expenses);
+    const salesForDerived = coalesce(row?.sales, row?.total_revenue, row?.revenue, row?.net_sales, row?.total_sales);
+    const derivedOperating =
+      salesForDerived > 0 && (sga > 0 || rd > 0 || otherOpEx > 0)
+        ? salesForDerived - sga - rd - otherOpEx
+        : null;
     y.operatingIncome = coalesce(
       row?.operating_income,
       row?.operatingIncome,
       row?.operating_income_loss,
-      row?.operating_profit
+      row?.operating_profit,
+      row?.pretax_income,
+      row?.income_before_tax,
+      row?.ebit,
+      row?.ebitda,
+      derivedOperating
     );
     y.netIncome = coalesce(
       row?.net_income,
