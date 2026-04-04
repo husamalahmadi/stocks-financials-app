@@ -1,6 +1,14 @@
 // FILE: client/src/domain/valuation.js
 import { resolveMarketAndSymbol, CURRENCY_BY_MARKET } from "../data/stocksCatalog.js";
 import { coalesce, toNumber } from "./financials.js";
+import {
+  twelvePrice,
+  twelveStatistics,
+  twelveBalanceSheet,
+  twelveIncomeStatement,
+} from "../services/twelveData.js";
+import { getTasiCompanyData } from "../services/tasiDataService.js";
+import { getSp500CompanyData, sp500ToValuationFormat } from "../services/sp500DataService.js";
 
 /** Prefer latest fiscal period (Twelve annual rows are usually newest-first, but not guaranteed). */
 function latestStatementRow(rows) {
@@ -10,20 +18,23 @@ function latestStatementRow(rows) {
   );
   return sorted[0] || {};
 }
-import {
-  twelvePrice,
-  twelveStatistics,
-  twelveBalanceSheet,
-  twelveIncomeStatement,
-} from "../services/twelveData.js";
-import { getTasiCompanyData, tasiToValuationFormat } from "../services/tasiDataService.js";
-import { getSp500CompanyData, sp500ToValuationFormat } from "../services/sp500DataService.js";
+
+/**
+ * Twelve payloads sometimes nest metrics under .statistics twice (API) or once (local file inner node).
+ */
+function normalizeValuationStats(raw) {
+  if (!raw || typeof raw !== "object") return {};
+  if (raw.valuations_metrics != null || raw.stock_statistics != null) return raw;
+  if (raw.statistics && typeof raw.statistics === "object") {
+    return normalizeValuationStats(raw.statistics);
+  }
+  return raw;
+}
 
 /**
  * Client-side replacement for GET /api/valuation/:ticker.
- * - TASI (SA): local tasi_financial_data.json for valuation inputs; twelvePrice only from Twelve.
- * - US (S&P 500): local sp500_financial_data.json; twelvePrice; may fall back to Twelve stats/statements if local missing.
- * Caller can still cache the result in sessionStorage (as the UI already does).
+ * - TASI (SA): reads tasi_financial_data.json via getTasiCompanyData (statistics + statements from company.data).
+ * - US (S&P 500): local sp500 bundle + optional Twelve fallback; twelvePrice for live quote.
  */
 export async function computeValuation({ ticker, market } = {}) {
   const r = await resolveMarketAndSymbol(ticker, market);
@@ -38,16 +49,19 @@ export async function computeValuation({ ticker, market } = {}) {
   if (resolvedMarket === "sa") {
     try {
       const tasiData = await getTasiCompanyData(tickerSA);
-      if (tasiData) {
-        const v = tasiToValuationFormat(tasiData);
-        if (v) {
-          statsJson = { statistics: v.stats };
-          bsJson = { balance_sheet: v.balance_sheet };
-          isJson = { income_statement: v.income_statement };
+      const d = tasiData?.data;
+      if (d) {
+        const innerStats = d.statistics?.statistics;
+        if (innerStats) statsJson = { statistics: innerStats };
+        if (Array.isArray(d.balance_sheet?.balance_sheet)) {
+          bsJson = { balance_sheet: d.balance_sheet.balance_sheet };
+        }
+        if (Array.isArray(d.income_statement?.income_statement)) {
+          isJson = { income_statement: d.income_statement.income_statement };
         }
       }
     } catch {
-      /* fall through to Twelve Data */
+      /* no local TASI bundle */
     }
   } else if (resolvedMarket === "us") {
     try {
@@ -75,7 +89,7 @@ export async function computeValuation({ ticker, market } = {}) {
 
   const priceJson = await twelvePrice(symbol).catch(() => ({}));
 
-  const stats = statsJson?.statistics || statsJson || {};
+  const stats = normalizeValuationStats(statsJson?.statistics || statsJson || {});
   const price = toNumber(priceJson?.price) ?? 0;
 
   const bs0 =
