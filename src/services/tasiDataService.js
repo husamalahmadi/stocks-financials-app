@@ -15,21 +15,26 @@ const TASI_DATA_URL = publicUrl("data/tasi_financial_data.json");
 
 let _tasiPromise = null;
 
+/** Never rejects: avoids a stuck rejected promise (valuation always calls this; financials may skip via cache). */
 async function loadTasiData() {
   if (_tasiPromise) return _tasiPromise;
   _tasiPromise = (async () => {
-    const res = await fetch(TASI_DATA_URL, { cache: "no-store" });
-    if (!res.ok) throw new Error(`Failed to load TASI data: ${res.status}`);
-    const json = await res.json();
-    const byTicker = new Map();
-    for (const c of iterateCompaniesFromRootJson(json)) {
-      const t = String(c?.ticker ?? "").trim();
-      if (t) {
-        byTicker.set(t, c);
-        byTicker.set(t.toUpperCase(), c);
+    try {
+      const res = await fetch(TASI_DATA_URL, { cache: "no-store" });
+      if (!res.ok) return { raw: { industries: {} }, byTicker: new Map() };
+      const json = await res.json();
+      const byTicker = new Map();
+      for (const c of iterateCompaniesFromRootJson(json)) {
+        const t = String(c?.ticker ?? "").trim();
+        if (t) {
+          byTicker.set(t, c);
+          byTicker.set(t.toUpperCase(), c);
+        }
       }
+      return { raw: json, byTicker };
+    } catch {
+      return { raw: { industries: {} }, byTicker: new Map() };
     }
-    return { raw: json, byTicker };
   })();
   return _tasiPromise;
 }

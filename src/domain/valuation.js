@@ -29,28 +29,36 @@ export async function computeValuation({ ticker, market } = {}) {
   let isJson = {};
 
   if (resolvedMarket === "sa") {
-    const tasiData = await getTasiCompanyData(tickerSA);
-    if (tasiData) {
-      const v = tasiToValuationFormat(tasiData);
-      const d = tasiData.data;
-      const hasUsableData = v && localJsonDataHasValuationInputs(d);
-      if (v && hasUsableData) {
-        statsJson = { statistics: v.stats };
-        bsJson = { balance_sheet: v.balance_sheet };
-        isJson = { income_statement: v.income_statement };
+    try {
+      const tasiData = await getTasiCompanyData(tickerSA);
+      if (tasiData) {
+        const v = tasiToValuationFormat(tasiData);
+        const d = tasiData.data;
+        const hasUsableData = v && localJsonDataHasValuationInputs(d);
+        if (v && hasUsableData) {
+          statsJson = { statistics: v.stats };
+          bsJson = { balance_sheet: v.balance_sheet };
+          isJson = { income_statement: v.income_statement };
+        }
       }
+    } catch {
+      /* fall through to Twelve Data */
     }
   } else if (resolvedMarket === "us") {
-    const sp500Data = await getSp500CompanyData(tickerUS);
-    if (sp500Data) {
-      const v = sp500ToValuationFormat(sp500Data);
-      const d = sp500Data.data;
-      const hasUsableData = v && localJsonDataHasValuationInputs(d);
-      if (v && hasUsableData) {
-        statsJson = { statistics: v.stats };
-        bsJson = { balance_sheet: v.balance_sheet };
-        isJson = { income_statement: v.income_statement };
+    try {
+      const sp500Data = await getSp500CompanyData(tickerUS);
+      if (sp500Data) {
+        const v = sp500ToValuationFormat(sp500Data);
+        const d = sp500Data.data;
+        const hasUsableData = v && localJsonDataHasValuationInputs(d);
+        if (v && hasUsableData) {
+          statsJson = { statistics: v.stats };
+          bsJson = { balance_sheet: v.balance_sheet };
+          isJson = { income_statement: v.income_statement };
+        }
       }
+    } catch {
+      /* fall through to Twelve Data */
     }
   }
 
