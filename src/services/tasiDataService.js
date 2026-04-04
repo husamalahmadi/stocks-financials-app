@@ -1,96 +1,39 @@
 // FILE: client/src/services/tasiDataService.js
 /**
- * Loads TASI financial data from local JSON.
- * Primary: tasi_financial_data.json (Twelve-style, by industry).
- * Fallback: tasi_all_financial_data.json (flat companies[]) when the primary file is missing or invalid JSON.
+ * Loads TASI financial data from local tasi_financial_data.json.
+ * Used instead of Twelve Data API for SA (TASI) companies - except stock price.
+ * Same pattern as sp500DataService.js / sp500_financial_data.json (Twelve-style industries tree).
  */
 
 import { publicUrl } from "../utils/publicUrl.js";
-import { stripExchangeSuffix } from "../data/stocksCatalog.js";
 import {
   iterateCompaniesFromRootJson,
   localJsonToFinancialsFormat,
   localJsonToValuationFormat,
 } from "./localFinancialJsonAdapters.js";
 
-const TASI_DATA_URLS = [
-  publicUrl("data/tasi_financial_data.json"),
-  publicUrl("data/tasi_all_financial_data.json"),
-];
+const TASI_DATA_URL = publicUrl("data/tasi_financial_data.json");
 
-const FETCH_ATTEMPTS = 3;
+let _tasiPromise = null;
 
-/** Successful parse with at least one company — kept for the SPA session. */
-let _tasiResolved = null;
-/** In-flight load (dedupes parallel callers). */
-let _tasiInflight = null;
-
-function delay(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-function buildTickerMap(json) {
-  const byTicker = new Map();
-  for (const c of iterateCompaniesFromRootJson(json)) {
-    const t = String(c?.ticker ?? "").trim();
-    if (t) {
-      byTicker.set(t, c);
-      byTicker.set(t.toUpperCase(), c);
-    }
-  }
-  return byTicker;
-}
-
-async function fetchTasiPayload() {
-  for (const url of TASI_DATA_URLS) {
-    for (let attempt = 0; attempt < FETCH_ATTEMPTS; attempt++) {
-      try {
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) {
-          await delay(350 * (attempt + 1));
-          continue;
-        }
-        const text = await res.text();
-        let json;
-        try {
-          json = JSON.parse(text);
-        } catch {
-          await delay(350 * (attempt + 1));
-          continue;
-        }
-        const byTicker = buildTickerMap(json);
-        if (byTicker.size > 0) {
-          return { raw: json, byTicker };
-        }
-      } catch {
-        await delay(350 * (attempt + 1));
-      }
-    }
-  }
-  return { raw: { industries: {} }, byTicker: new Map() };
-}
-
-/**
- * Loads once on success; retries on later calls if the bundle was missing or the first fetch failed.
- * Avoids pinning an empty Map forever (which zeroed valuation while cached financials still showed charts).
- */
 async function loadTasiData() {
-  if (_tasiResolved) return _tasiResolved;
-  if (_tasiInflight) return _tasiInflight;
-
-  _tasiInflight = (async () => {
-    const result = await fetchTasiPayload();
-    if (result.byTicker.size > 0) {
-      _tasiResolved = result;
+  if (_tasiPromise) return _tasiPromise;
+  _tasiPromise = (async () => {
+    try {
+      const res = await fetch(TASI_DATA_URL, { cache: "no-store" });
+      if (!res.ok) return { raw: { industries: {} }, byTicker: new Map() };
+      const json = await res.json();
+      const byTicker = new Map();
+      for (const c of iterateCompaniesFromRootJson(json)) {
+        const t = String(c?.ticker ?? "").trim().toUpperCase();
+        if (t) byTicker.set(t, c);
+      }
+      return { raw: json, byTicker };
+    } catch {
+      return { raw: { industries: {} }, byTicker: new Map() };
     }
-    return result;
   })();
-
-  try {
-    return await _tasiInflight;
-  } finally {
-    _tasiInflight = null;
-  }
+  return _tasiPromise;
 }
 
 /**
@@ -98,8 +41,8 @@ async function loadTasiData() {
  */
 export async function getTasiCompanyData(ticker) {
   const { byTicker } = await loadTasiData();
-  const t = stripExchangeSuffix(String(ticker ?? "").trim());
-  return byTicker.get(t) ?? byTicker.get(t.toUpperCase()) ?? null;
+  const t = String(ticker ?? "").trim().toUpperCase();
+  return byTicker.get(t) ?? null;
 }
 
 export const tasiToFinancialsFormat = localJsonToFinancialsFormat;
