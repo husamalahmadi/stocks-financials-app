@@ -13,9 +13,8 @@ import { localJsonDataHasValuationInputs } from "../services/localFinancialJsonA
 
 /**
  * Client-side replacement for GET /api/valuation/:ticker.
- * - TASI (SA): uses local tasi_financial_data.json for financials; twelvePrice for live price.
- * - US (S&P 500): uses local sp500_financial_data.json for financials; twelvePrice for live price.
- * - Falls back to Twelve Data API when local data is empty/incomplete.
+ * - TASI (SA): local tasi_financial_data.json for valuation inputs; twelvePrice only from Twelve.
+ * - US (S&P 500): local sp500_financial_data.json; twelvePrice; may fall back to Twelve stats/statements if local missing.
  * Caller can still cache the result in sessionStorage (as the UI already does).
  */
 export async function computeValuation({ ticker, market } = {}) {
@@ -62,7 +61,7 @@ export async function computeValuation({ ticker, market } = {}) {
     }
   }
 
-  if (!statsJson?.statistics && !bsJson?.balance_sheet) {
+  if (resolvedMarket === "us" && !statsJson?.statistics && !bsJson?.balance_sheet) {
     [statsJson, bsJson, isJson] = await Promise.all([
       twelveStatistics(symbol).catch(() => ({})),
       twelveBalanceSheet(symbol).catch(() => ({})),

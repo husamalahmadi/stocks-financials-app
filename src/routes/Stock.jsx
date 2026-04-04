@@ -163,14 +163,18 @@ export default function Stock() {
         const r = await resolveMarketAndSymbol(ticker, market);
         if (!r.ok || !alive) return;
         const symbol = r.symbol;
-        const [logoRes, profileRes] = await Promise.all([
-          twelveLogo(symbol),
-          twelveProfile(symbol),
-        ]);
-        if (!alive) return;
-        const base = logoRes?.logo_base;
-        setLogoUrl(base && typeof base === "string" ? base : null);
-        setProfile(profileRes && typeof profileRes === "object" ? profileRes : null);
+        if (market === "sa") {
+          const profileRes = await twelveProfile(symbol);
+          if (!alive) return;
+          setLogoUrl(null);
+          setProfile(profileRes && typeof profileRes === "object" ? profileRes : null);
+        } else {
+          const [logoRes, profileRes] = await Promise.all([twelveLogo(symbol), twelveProfile(symbol)]);
+          if (!alive) return;
+          const base = logoRes?.logo_base;
+          setLogoUrl(base && typeof base === "string" ? base : null);
+          setProfile(profileRes && typeof profileRes === "object" ? profileRes : null);
+        }
       } catch {
         if (!alive) return;
         setLogoUrl(null);

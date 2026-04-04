@@ -10,9 +10,9 @@ const DAYS_30_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Client-side replacement for GET /api/financials/:ticker.
- * - TASI (SA): uses local tasi_financial_data.json (no API).
+ * - TASI (SA): uses local tasi_financial_data.json only (no Twelve statements/cash flow).
  * - US (S&P 500): uses local sp500_financial_data.json (no API).
- * - Falls back to Twelve Data API when local data is empty.
+ * - US falls back to Twelve Data API when local data is empty; SA never does.
  * - Only caches when years.length > 0 (same as server behavior).
  */
 export async function getFinancialsCached({
@@ -56,7 +56,7 @@ export async function getFinancialsCached({
     }
   }
 
-  if (!income?.length && !balance?.length && !cash?.length) {
+  if (r.market !== "sa" && !income?.length && !balance?.length && !cash?.length) {
     const symbol = r.symbol;
     [income, balance, cash] = await Promise.all([
       twelveIncomeStatement(symbol, { period: "annual" }).catch((e) => {
